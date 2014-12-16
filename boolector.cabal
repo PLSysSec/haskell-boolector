@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            bindings to SMT solver boolector
 description:         bindings to SMT solver boolector
 license:             AllRightsReserved
-license-file:        cbits/boolector/COPYING
+license-file:        LICENSE
 author:              Armin Biere
 maintainer:          johannes.waldmann@htwk-leipzig.de
 category:            Numeric
@@ -12,7 +12,8 @@ cabal-version:       >=1.10
 -- homepage:            
 
 extra-source-files:
-  cbits/boolector/boolector.h
+  build.sh
+  API_Usage_Examples.hs
 
 library
   hs-source-dirs: src
