@@ -1,0 +1,9 @@
+*~
+*.o
+*.hi
+dist
+boolector-2.0.1-with-lingeling-azd/
+cbits
+src/Boolector/Foreign.chi
+src/Boolector/Foreign.chs.h
+src/Boolector/Foreign.hs
