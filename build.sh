@@ -2,7 +2,7 @@
 
 cat LICENSE
 
-echo "download and unpack Boolector source"
+echo "#################### download and unpack Boolector source"
 
 BTOR=boolector-2.0.1-with-lingeling-azd
 EXT=.tar.bz2
@@ -13,7 +13,7 @@ wget http://fmv.jku.at/boolector/$BTOR$EXT
 rm -rf $BTOR
 tar xvfj $BTOR$EXT
 
-echo "configure and compile Boolector"
+echo "#################### configure and compile Boolector"
 
 # this is from the makefile of boolector
 # but we need to add -fPIC / -shared :
@@ -29,13 +29,13 @@ mv boolector* boolector
 ( cd boolector && ./configure -shared && make )
 popd
 
-echo "you need to put cbits/boolector/libboolector.{a,so}"
-echo "in a place where your (dynamic) linker finds it."
+echo "#################### you need to put cbits/boolector/libboolector.{a,so}"
+echo "#################### in a place where your (dynamic) linker finds it."
 
-echo "prepare for building the Haskell binding"
+echo "#################### prepare for building the Haskell binding"
 
 rm -f cbits
 ln -s $BTOR cbits
 
-echo "now type:  cabal install -v"
+echo "#################### now type:  cabal install -v"
 
