@@ -152,14 +152,19 @@ import Control.Applicative
 {#fun fun_sort as ^ { `Tor' , } -> `()' #}
 {#fun release_sort as ^ { `Tor' , } -> `()' #}
 {#fun parse as ^ { `Tor' , } -> `()' #}
-{#fun dump_btor_node as ^ { `Tor' , } -> `()' #}
-{#fun dump_btor as ^ { `Tor' , } -> `()' #}
-{#fun dump_smt1_node as ^ { `Tor' , } -> `()' #}
-{#fun dump_smt1 as ^ { `Tor' , } -> `()' #}
-{#fun dump_smt2_node as ^ { `Tor' , } -> `()' #}
-{#fun dump_smt2 as ^ { `Tor' , } -> `()' #}
 
 -}
 
 
+-- see https://www.haskell.org/pipermail/haskell-cafe/2014-December/117371.html
+
+{#pointer *FILE as File foreign finalizer fclose newtype#}
+{#fun fopen as ^ {`String', `String'} -> `File' #}
+
+{#fun dump_btor_node as ^ { `Tor' , `File', `Node' } -> `()' #}
+{#fun dump_btor as ^ { `Tor' , `File' } -> `()' #}
+{#fun dump_smt1_node as ^ { `Tor' , `File', `Node' } -> `()' #}
+{#fun dump_smt1 as ^ { `Tor' , `File' } -> `()' #}
+{#fun dump_smt2_node as ^ { `Tor' , `File', `Node' } -> `()' #}
+{#fun dump_smt2 as ^ { `Tor' , `File' } -> `()' #}
 

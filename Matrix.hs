@@ -12,7 +12,7 @@ import TPDB.Pretty
 import qualified TPDB.Data as T
 
 import qualified Data.Map as M
-import Data.List ( transpose, nub )
+import Data.List ( transpose, nub, intersperse )
 
 import System.IO
 
@@ -47,6 +47,11 @@ remove dim bits us = do
     (ok, sws) <- compatible dim bits int us
     mo <- monotone int
     B.assert =<< ( mo B.&& ok )
+    let basename = concat $ intersperse "-"
+          [ "t", show $ length us , show dim, show bits ] 
+    B.dumpBtor $ basename ++ ".btor"
+    B.dumpSmt1 $ basename ++ ".smt1"
+    B.dumpSmt2 $ basename ++ ".smt2"
     B.withSolution $ do
         i <- rinter int
         us <- forM sws $ \ (s, w, u) -> do
