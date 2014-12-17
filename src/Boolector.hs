@@ -11,7 +11,7 @@ import Control.Monad.State
 import Control.Applicative
 import Data.Char (isDigit)
 
-import Prelude hiding (read, not, and, or)
+import Prelude hiding (read, not, and, or, (&&), (||))
 import qualified Prelude
 
 data S =
@@ -56,6 +56,14 @@ val n = do
     when (Prelude.not $ all isDigit a) $ error $ "Boolector.value: not numeric: " ++ a
     return $ foldl ( \ n c -> 2 * n + Prelude.read [c] ) 0 a
 
+-- | get Boolean value (one bit)
+bval n = do
+    v <- val n
+    return $ case v of
+        0 -> False
+        1 -> True
+        _ -> error $ "Boolector.bval: not boolean: " ++ show v
+
 wrap0 action = do
     s <- get ; liftIO $ action ( btor s )
 wrap1 action x1 = do
@@ -64,6 +72,9 @@ wrap2 action x1 x2 = do
     s <- get ; liftIO $ action ( btor s ) x1 x2
 wrap3 action x1 x2 x3 = do
     s <- get ; liftIO $ action ( btor s ) x1 x2 x3
+
+and [] = true ; and (x:xs) = foldM (&&) x xs
+or  [] = false ; or (x:xs) = foldM (||) x xs
 
 assert = wrap1 B.assert
 false = wrap0 B.false
@@ -85,13 +96,13 @@ implies = wrap2 B.implies
 iff = wrap2 B.iff
 xor = wrap2 B.xor
 xnor = wrap2 B.xnor
-and = wrap2 B.and
+(&&) = wrap2 B.and
 nand = wrap2 B.nand
-or = wrap2 B.or
+(||) = wrap2 B.or
 nor = wrap2 B.nor
 eq = wrap2 B.eq
 ne = wrap2 B.ne
-add = wrap2 B.and
+add = wrap2 B.add
 uaddo = wrap2 B.uaddo
 saddo = wrap2 B.saddo
 mul = wrap2 B.mul
