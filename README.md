@@ -38,7 +38,7 @@ Note that
 
 ## Installing, Licensing
 
-The script  build.sh  will download and compile
+The script  `build.sh`  will download and compile
 Boolector sources.
 If you run it, you accept Boolector's licensing terms.
 
