@@ -2,34 +2,41 @@ Haskell Binding for SMT Solver Boolector.
 
 <http://fmv.jku.at/boolector/> 
 
-The binding is a low-level translation of Boolector's API.
+The binding is a (quite) low-level translation
+of Boolector's API.
 
-Example. This program (`API_Usage_Example.hs`)
+: Example.
+
+This program (`API_Usage_Example.hs`)
 ```
 import qualified Boolector as B
 
-main = do
-  b <- B.new
-  B.setOpt b "model_gen" 2
-  c <- B.unsignedInt b 35 8
-  x <- B.var b 8 "x" ;  y <- B.var b 8 "y"
-  p <- B.mul b x y ;  o <- B.umulo b x y
-  no <- B.not b o ;  e <- B.eq b c p
-  B.assert b =<< B.and b no e
-  one <- B.one b 8
-  B.assert b =<< B.ugt b x one
-  B.assert b =<< B.ugt b y one 
-  status <- B.sat b ; print status
-  s <- B.bvAssignment b x ; print s
-  t <- B.bvAssignment b y ; print t
+import Control.Applicative
 
+main = do
+    result <- B.withBoolector $ do
+        c <- B.unsignedInt 35 8
+        x <- B.var 8 ; y <- B.var 8
+        p <- B.mul x y ; o <- B.umulo x y
+        no <- B.not o ; e <- B.eq c p
+        B.assert =<< no B.&& e
+        one <- B.one 8
+        B.assert =<< B.ugt x one
+        B.assert =<< B.ugt y one
+        B.dumpSmt2 "dump_example.smt2"
+        B.withSolution $ do
+            (,) <$> B.val x <*> B.val y
+    print result  
 ```
 will print
 ```
-SAT
-"00000111"
-"00000101"
+Just (7,5)
 ```
+Note that
+* names are as in `boolector.h` (but `boolector_and` is `&&` and `boolector_or` is `||`)
+* the program is `do <build formula> ; withSolution <access model>`
+
+: Installing, Licensing
 
 The script  build.sh  will download and compile
 Boolector sources.
