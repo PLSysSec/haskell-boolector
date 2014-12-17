@@ -1,13 +1,13 @@
-Haskell Binding for SMT Solver Boolector.
+# Haskell Binding for SMT Solver Boolector.
 
 <http://fmv.jku.at/boolector/> 
 
 The binding is a (quite) low-level translation
 of Boolector's API.
 
-: Example.
+## Example.
 
-This program (`API_Usage_Example.hs`)
+This program (`API_Usage_Examples.hs`)
 ```
 import qualified Boolector as B
 
@@ -36,7 +36,7 @@ Note that
 * names are as in `boolector.h` (but `boolector_and` is `&&` and `boolector_or` is `||`)
 * the program is `do <build formula> ; withSolution <access model>`
 
-: Installing, Licensing
+## Installing, Licensing
 
 The script  build.sh  will download and compile
 Boolector sources.
