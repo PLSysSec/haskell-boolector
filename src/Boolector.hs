@@ -3,9 +3,14 @@
 
 module Boolector
 
+( module Boolector
+, Node ()
+)       
+
 where
 
 import qualified Boolector.Foreign as B
+import Boolector.Foreign (Node)
 
 import Control.Monad.State
 import Control.Applicative
