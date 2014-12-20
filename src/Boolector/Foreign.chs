@@ -13,7 +13,8 @@ import Control.Applicative
 {# enum define Status { BOOLECTOR_UNKNOWN as UNKNOWN, BOOLECTOR_SAT as SAT, BOOLECTOR_UNSAT as UNSAT, BOOLECTOR_PARSE_ERROR as PARSE_ERROR }
   deriving (Eq, Ord, Show ) #}
 
-{#pointer *Btor as Tor foreign finalizer boolector_delete newtype #}
+-- {#pointer *Btor as Tor foreign finalizer boolector_delete newtype #}
+{#pointer *Btor as Tor foreign newtype #}
     
 {#pointer *BoolectorNode as Node newtype #}
 
@@ -24,6 +25,7 @@ import Control.Applicative
 
 {#fun new as ^ { } -> `Tor'  #}
 {#fun clone as ^ { `Tor' } -> `Tor' #}
+{#fun delete as ^ { `Tor' } -> `()' #}
 
 {#fun get_refs as ^ { `Tor' } -> `Int' #}
 {#fun reset_time as ^ { `Tor' } -> `()' #}

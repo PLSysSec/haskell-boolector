@@ -12,9 +12,13 @@ where
 import qualified Boolector.Foreign as B
 import Boolector.Foreign (Node)
 
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Applicative
 import Data.Char (isDigit)
+
+import Control.Exception (bracket, finally, mask_, onException )
+import Control.Concurrent.Async
+import System.IO
 
 import Prelude hiding (read, not, and, or, (&&), (||))
 import qualified Prelude
@@ -33,7 +37,11 @@ withBoolector :: (Boolector (Boolector a))
          -> IO (Maybe a)
 withBoolector action = do
     b <- B.new
+    withBtor b action
+
+withBtor b action = do    
     B.setOpt b "model_gen" 2
+    B.setOpt b "auto_cleanup" 1
     let s0 = S { btor = b , next = 0, solved = False }
     cont <- evalStateT (un action) s0
     status <- B.sat b
@@ -41,6 +49,13 @@ withBoolector action = do
         B.SAT -> do
             Just <$> evalStateT (un cont) s0 { solved = True }
         _ -> return Nothing
+
+withBoolectorAsync :: (Boolector (Boolector a))
+         -> IO (Maybe a)
+withBoolectorAsync action = bracket B.new B.delete $ \ b -> do
+  mask_ $ withAsync (withBtor b action) $ \ a -> do
+    wait a `onException` do
+      hPutStrLn stderr "*** want to interrupt Boolector here ***"
 
 -- | run the action after a solution was found.
 withSolution action = return action
