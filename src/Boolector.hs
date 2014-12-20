@@ -76,6 +76,15 @@ val n = do
     when (Prelude.not $ all isDigit a) $ error $ "Boolector.value: not numeric: " ++ a
     return $ foldl ( \ n c -> 2 * n + Prelude.read [c] ) 0 a
 
+getWidth = wrap1 B.getWidth
+
+signedVal :: B.Node -> Boolector Integer
+signedVal n = do
+    w <- getWidth n
+    v <- val n
+    let h = 2 ^ pred w
+    return $ if v >= h then v - (2*h) else v
+
 -- | get Boolean value (one bit)
 bval n = do
     v <- val n
@@ -135,6 +144,7 @@ slte  = wrap2 B.slte
 ugt  = wrap2 B.ugt 
 sgt  = wrap2 B.sgt 
 ugte = wrap2 B.ugte
+sgte = wrap2 B.sgte
 sll  = wrap2 B.sll 
 srl  = wrap2 B.srl 
 sra  = wrap2 B.sra 

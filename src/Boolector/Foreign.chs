@@ -87,6 +87,7 @@ import Control.Applicative
 {#fun ugt as ^ { `Tor' , `Node', `Node'} -> `Node' #}
 {#fun sgt as ^ { `Tor' , `Node', `Node'} -> `Node' #}
 {#fun ugte as ^ { `Tor' , `Node', `Node'} -> `Node' #}
+{#fun sgte as ^ { `Tor' , `Node', `Node'} -> `Node' #}
 {#fun sll as ^ { `Tor' , `Node', `Node'} -> `Node' #}
 {#fun srl as ^ { `Tor' , `Node', `Node'} -> `Node' #}
 {#fun sra as ^ { `Tor' , `Node', `Node'} -> `Node' #}
@@ -130,12 +131,13 @@ import Control.Applicative
 {#fun is_bound_param as ^ { `Tor' , } -> `()' #}
 {#fun is_fun as ^ { `Tor' , } -> `()' #}
 {#fun get_fun_arity as ^ { `Tor' , } -> `()' #}
-{#fun get_width as ^ { `Tor' , } -> `()' #}
 {#fun get_index_width as ^ { `Tor' , } -> `()' #}
 {#fun get_symbol as ^ { `Tor' , } -> `()' #}
 {#fun set_symbol as ^ { `Tor' , } -> `()' #}
 
 -}
+
+{#fun get_width as ^ { `Tor' , `Node' } -> `Int' #}
 
 {#fun bv_assignment as ^ { `Tor' , `Node' } -> `String' #}
 
