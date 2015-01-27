@@ -1,6 +1,7 @@
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language NoMonomorphismRestriction #-}
-
+{-# language FlexibleContexts #-}
+    
 module Boolector
 
 ( module Boolector
