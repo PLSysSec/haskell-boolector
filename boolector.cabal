@@ -29,7 +29,7 @@ library
   build-tools:      c2hs
 
   extra-libraries:  boolector
-  extra-lib-dirs:  /usr/local/lib64
+  extra-lib-dirs:  /usr/local/lib64/boolector
   include-dirs: cbits/boolector
   includes:         boolector.h
 
