@@ -1,5 +1,5 @@
 name:                boolector
-version:             0.1.0.0
+version:             2.0.6.0
 synopsis:            bindings to SMT solver boolector
 description:         bindings to SMT solver boolector
 license:             AllRightsReserved
@@ -22,7 +22,7 @@ library
   other-modules:
       Boolector.Foreign
   build-depends:
-        base, mtl, async
+        base, mtl, async, stm
 
   ghc-options: -Wall -fno-warn-orphans
   default-language: Haskell2010

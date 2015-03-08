@@ -58,6 +58,7 @@ import Data.Char (isDigit)
 
 import Control.Exception (bracket, finally, mask_, onException )
 import Control.Concurrent.Async
+import Control.Concurrent.STM
 import System.IO
 
 import Prelude hiding (read, not, and, or, (&&), (||))
@@ -94,10 +95,14 @@ withBtor b action = do
 
 withBoolectorAsync :: (Boolector (Boolector a))
          -> IO (Maybe a)
-withBoolectorAsync action = bracket B.new B.delete $ \ b -> do
-  mask_ $ withAsync (withBtor b action) $ \ a -> do
-    wait a `onException` do
-      hPutStrLn stderr "*** want to interrupt Boolector here ***"
+withBoolectorAsync action = do
+  st <- atomically $ newTVar 0
+  bracket B.new B.delete $ \ b -> do
+    B.setTerm b ( \ _ -> atomically $ readTVar st ) undefined
+    mask_ $ withAsync (withBtor b action) $ \ a -> do
+      wait a `onException` do
+        hPutStrLn stderr "*** want to interrupt Boolector here ***"
+        atomically $ writeTVar st 1
 
 -- | run the action after a solution was found.
 withSolution action = return action
