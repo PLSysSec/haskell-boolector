@@ -159,6 +159,19 @@ import Control.Applicative
 
 -}
 
+-- see http://stackoverflow.com/a/28621930/2868481
+
+-- does not work? : {#fun set_term as ^ { `Tor', `FunPtr (Ptr () -> IO CInt)', `Ptr ()' } -> `()' #}
+
+setTerm b callback = do
+  cb <- makeWrapper callback
+  withTor b $ \ b' -> setTerm'_ b' cb nullPtr
+
+foreign import ccall "boolector_set_term" setTerm'_ ::
+  Ptr Tor -> (FunPtr (Ptr () -> IO Int)) -> Ptr () -> IO ()
+
+foreign import ccall "wrapper" makeWrapper ::
+  (Ptr () -> IO Int) -> IO (FunPtr (Ptr () -> IO Int))
 
 -- see https://www.haskell.org/pipermail/haskell-cafe/2014-December/117371.html
 

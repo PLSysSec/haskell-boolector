@@ -1,9 +1,49 @@
+{-|
+
+
+This module presents Boolector functions via a monadic API.
+
+Typical usage:
+
+@
+import qualified Boolector as B
+import Control.Applicative
+
+main = do
+    result <- B.withBoolector $ do
+        c <- B.unsignedInt 35 8
+        x <- B.var 8 ; y <- B.var 8
+        p <- B.mul x y ; o <- B.umulo x y
+        no <- B.not o ; e <- B.eq c p
+        B.assert =<< no B.&& e
+        one <- B.one 8
+        B.assert =<< B.ugt x one
+        B.assert =<< B.ugt y one
+        B.dumpSmt2 "dump_example.smt2"
+        B.withSolution $ do
+            (,) <$> B.val x <*> B.val y
+    print result
+@
+
+This will print @Just (7,5)@
+
+Note:
+
+* the program is 'do <build formula> ; withSolution <access model>'
+
+* For semantics of operations, see <http://fmv.jku.at/boolector/doc/pyboolector.html>
+
+* names are as given there, but 'boolector_and' is @&&@ and 'boolector_or' is @||@
+
+-}
+
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language NoMonomorphismRestriction #-}
-
+{-# language FlexibleContexts #-}
+    
 module Boolector
 
-( module Boolector
+( module Boolector 
 , Node ()
 )       
 
@@ -18,10 +58,18 @@ import Data.Char (isDigit)
 
 import Control.Exception (bracket, finally, mask_, onException )
 import Control.Concurrent.Async
+import Control.Concurrent.STM
+import Data.Time.Clock
+import Data.Time.Format
+import Data.Time.LocalTime ( ZonedTime )
+import System.Locale ( rfc822DateFormat, defaultTimeLocale )
+
 import System.IO
 
 import Prelude hiding (read, not, and, or, (&&), (||))
 import qualified Prelude
+
+-- * The monad
 
 data S =
      S { btor :: ! B.Tor -- ^  solver instance
@@ -52,10 +100,29 @@ withBtor b action = do
 
 withBoolectorAsync :: (Boolector (Boolector a))
          -> IO (Maybe a)
-withBoolectorAsync action = bracket B.new B.delete $ \ b -> do
-  mask_ $ withAsync (withBtor b action) $ \ a -> do
-    wait a `onException` do
-      hPutStrLn stderr "*** want to interrupt Boolector here ***"
+withBoolectorAsync action = do
+  bracket ( do
+              b <- B.new
+              st <- atomically $ newTVar 0
+              B.setTerm b $ \ _ -> do
+                x <- atomically $ readTVar st
+                when (x /= 0) $ msg "*** termination callback: 1 ***"
+                return x
+              return (b, st)
+          )
+          ( \ (b,st) -> do
+               B.delete b
+               msg "*** returning ***"
+          )
+          $ \ (b,st) -> 
+    mask_ $ withAsync (withBtor b action) $ \ a -> do
+      wait a `onException` do
+        msg "*** want to interrupt Boolector here ***"
+        atomically $ writeTVar st 1
+
+msg s = do
+        t <- getCurrentTime
+        hPutStrLn stderr $ unwords [ formatTime defaultTimeLocale rfc822DateFormat t, s ]
 
 -- | run the action after a solution was found.
 withSolution action = return action
@@ -102,6 +169,8 @@ wrap2 action x1 x2 = do
     s <- get ; liftIO $ action ( btor s ) x1 x2
 wrap3 action x1 x2 x3 = do
     s <- get ; liftIO $ action ( btor s ) x1 x2 x3
+
+-- * Operations
 
 and [] = true ; and (x:xs) = foldM (&&) x xs
 or  [] = false ; or (x:xs) = foldM (||) x xs
