@@ -59,6 +59,11 @@ import Data.Char (isDigit)
 import Control.Exception (bracket, finally, mask_, onException )
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import Data.Time.Clock
+import Data.Time.Format
+import Data.Time.LocalTime ( ZonedTime )
+import System.Locale ( rfc822DateFormat, defaultTimeLocale )
+
 import System.IO
 
 import Prelude hiding (read, not, and, or, (&&), (||))
@@ -96,16 +101,21 @@ withBtor b action = do
 withBoolectorAsync :: (Boolector (Boolector a))
          -> IO (Maybe a)
 withBoolectorAsync action = do
+  let msg s = do
+        t <- getCurrentTime
+        hPutStrLn stderr $ unwords [ formatTime defaultTimeLocale rfc822DateFormat t, s ]
   st <- atomically $ newTVar 0
-  bracket B.new B.delete $ \ b -> do
+  out <- bracket B.new B.delete $ \ b -> do
     B.setTerm b $ \ _ -> do
        x <- atomically $ readTVar st
-       when (x /= 0) $ hPutStrLn stderr "*** termination callback: 1 ***"
+       when (x /= 0) $ msg "*** termination callback: 1 ***"
        return x
     mask_ $ withAsync (withBtor b action) $ \ a -> do
       wait a `onException` do
-        hPutStrLn stderr "*** want to interrupt Boolector here ***"
+        msg "*** want to interrupt Boolector here ***"
         atomically $ writeTVar st 1
+  msg "*** returning ***"
+  return out
 
 -- | run the action after a solution was found.
 withSolution action = return action
