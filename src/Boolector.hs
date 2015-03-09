@@ -74,7 +74,8 @@ val n = do
     when (Prelude.not $ solved s) $ error "Boolector.value: may only occur after withSolution"
     a <- wrap1 B.bvAssignment n
     when (Prelude.not $ all isDigit a) $ error $ "Boolector.value: not numeric: " ++ a
-    return $ foldl ( \ n c -> 2 * n + Prelude.read [c] ) 0 a
+    let n = foldl ( \ n c -> 2 * n + Prelude.read [c] ) 0 a
+    n `seq`return n
 
 getWidth = wrap1 B.getWidth
 
