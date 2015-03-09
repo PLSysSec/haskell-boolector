@@ -101,21 +101,28 @@ withBtor b action = do
 withBoolectorAsync :: (Boolector (Boolector a))
          -> IO (Maybe a)
 withBoolectorAsync action = do
-  let msg s = do
-        t <- getCurrentTime
-        hPutStrLn stderr $ unwords [ formatTime defaultTimeLocale rfc822DateFormat t, s ]
-  st <- atomically $ newTVar 0
-  out <- bracket B.new B.delete $ \ b -> do
-    B.setTerm b $ \ _ -> do
-       x <- atomically $ readTVar st
-       when (x /= 0) $ msg "*** termination callback: 1 ***"
-       return x
+  bracket ( do
+              b <- B.new
+              st <- atomically $ newTVar 0
+              B.setTerm b $ \ _ -> do
+                x <- atomically $ readTVar st
+                when (x /= 0) $ msg "*** termination callback: 1 ***"
+                return x
+              return (b, st)
+          )
+          ( \ (b,st) -> do
+               B.delete b
+               msg "*** returning ***"
+          )
+          $ \ (b,st) -> 
     mask_ $ withAsync (withBtor b action) $ \ a -> do
       wait a `onException` do
         msg "*** want to interrupt Boolector here ***"
         atomically $ writeTVar st 1
-  msg "*** returning ***"
-  return out
+
+msg s = do
+        t <- getCurrentTime
+        hPutStrLn stderr $ unwords [ formatTime defaultTimeLocale rfc822DateFormat t, s ]
 
 -- | run the action after a solution was found.
 withSolution action = return action
