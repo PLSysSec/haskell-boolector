@@ -98,7 +98,10 @@ withBoolectorAsync :: (Boolector (Boolector a))
 withBoolectorAsync action = do
   st <- atomically $ newTVar 0
   bracket B.new B.delete $ \ b -> do
-    B.setTerm b ( \ _ -> atomically $ readTVar st ) undefined
+    B.setTerm b $ \ _ -> do
+       x <- atomically $ readTVar st
+       when (x /= 0) $ hPutStrLn stderr "*** termination callback: 1 ***"
+       return x
     mask_ $ withAsync (withBtor b action) $ \ a -> do
       wait a `onException` do
         hPutStrLn stderr "*** want to interrupt Boolector here ***"

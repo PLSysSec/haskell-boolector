@@ -163,9 +163,9 @@ import Control.Applicative
 
 -- does not work? : {#fun set_term as ^ { `Tor', `FunPtr (Ptr () -> IO CInt)', `Ptr ()' } -> `()' #}
 
-setTerm b callback state = do
+setTerm b callback = do
   cb <- makeWrapper callback
-  withTor b $ \ b' -> setTerm'_ b' cb state
+  withTor b $ \ b' -> setTerm'_ b' cb nullPtr
 
 foreign import ccall "boolector_set_term" setTerm'_ ::
   Ptr Tor -> (FunPtr (Ptr () -> IO Int)) -> Ptr () -> IO ()
