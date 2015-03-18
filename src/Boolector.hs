@@ -37,6 +37,7 @@ Note:
 
 -}
 
+{-# language CPP #-}
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language NoMonomorphismRestriction #-}
 {-# language FlexibleContexts #-}
@@ -60,9 +61,15 @@ import Control.Exception (bracket, finally, mask_, onException )
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Data.Time.Clock
-import Data.Time.Format
+
 import Data.Time.LocalTime ( ZonedTime )
+
+#if __GLASGOW_HASKELL__ >= 710
+import Data.Time.Format (formatTime, rfc822DateFormat, defaultTimeLocale )
+#else
 import System.Locale ( rfc822DateFormat, defaultTimeLocale )
+import Data.Time.Format (formatTime )
+#endif
 
 import System.IO
 
