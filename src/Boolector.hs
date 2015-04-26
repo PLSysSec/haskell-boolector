@@ -60,16 +60,12 @@ import Data.Char (isDigit)
 import Control.Exception (bracket, finally, mask_, onException )
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import Data.IORef
 import Data.Time.Clock
 
 import Data.Time.LocalTime ( ZonedTime )
 
-#if __GLASGOW_HASKELL__ >= 710
 import Data.Time.Format (formatTime, rfc822DateFormat, defaultTimeLocale )
-#else
-import System.Locale ( rfc822DateFormat, defaultTimeLocale )
-import Data.Time.Format (formatTime )
-#endif
 
 import System.IO
 
@@ -111,8 +107,10 @@ withBoolectorAsync action = do
   bracket ( do
               b <- B.new
               st <- atomically $ newTVar 0
+              -- st <- newIORef 0
               B.setTerm b $ \ _ -> do
                 x <- atomically $ readTVar st
+                -- x <- readIORef st
                 when (x /= 0) $ msg "*** termination callback: 1 ***"
                 return x
               return (b, st)
@@ -126,6 +124,7 @@ withBoolectorAsync action = do
       wait a `onException` do
         msg "*** want to interrupt Boolector here ***"
         atomically $ writeTVar st 1
+        -- writeIORef st 1
 
 msg s = do
         t <- getCurrentTime
