@@ -4,7 +4,8 @@ cat LICENSE
 
 echo "#################### download and unpack Boolector source"
 
-BTOR=boolector-2.0.6-with-lingeling-azd
+# BTOR=boolector-2.0.6-with-lingeling-azd
+BTOR=boolector-2.1.1-with-lingeling-b85
 EXT=.tar.bz2
 
 rm -f $BTOR$EXT
