@@ -247,8 +247,6 @@ wrap_dump1 action f x1 = wrap0 $ \ b -> do
     
 dumpBtor = wrap_dump0 B.dumpBtor 
 dumpBtorNode = wrap_dump1 B.dumpBtorNode
-dumpSmt1 = wrap_dump0 B.dumpSmt1 
-dumpSmt1Node = wrap_dump1 B.dumpSmt1Node
 dumpSmt2 = wrap_dump0 B.dumpSmt2 
 dumpSmt2Node = wrap_dump1 B.dumpSmt2Node
 

@@ -180,8 +180,7 @@ foreign import ccall "wrapper" makeWrapper ::
 
 {#fun dump_btor_node as ^ { `Tor' , `File', `Node' } -> `()' #}
 {#fun dump_btor as ^ { `Tor' , `File' } -> `()' #}
-{#fun dump_smt1_node as ^ { `Tor' , `File', `Node' } -> `()' #}
-{#fun dump_smt1 as ^ { `Tor' , `File' } -> `()' #}
+
 {#fun dump_smt2_node as ^ { `Tor' , `File', `Node' } -> `()' #}
 {#fun dump_smt2 as ^ { `Tor' , `File' } -> `()' #}
 
