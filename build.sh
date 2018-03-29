@@ -4,9 +4,7 @@ cat LICENSE
 
 echo "#################### download and unpack Boolector source"
 
-# BTOR=boolector-2.0.6-with-lingeling-azd
-# BTOR=boolector-2.1.1-with-lingeling-b85
-BTOR=boolector-2.2.0-with-lingeling-bal
+BTOR=boolector-2.4.1-with-lingeling-bbc
 EXT=.tar.bz2
 
 rm -f $BTOR$EXT
@@ -28,7 +26,7 @@ mv lingeling* lingeling
 rm -rf boolector*
 tar xf archives/boolector*.tar.gz
 mv boolector* boolector
-( cd boolector && ./configure -shared && make )
+( cd boolector && ./configure.sh -shared && make )
 popd
 
 echo "#################### you need to put cbits/boolector/libboolector.{a,so}"

@@ -1,13 +1,3 @@
-# Haskell Binding for SMT Solver Boolector.
-
-<http://fmv.jku.at/boolector/> 
-
-The binding is a (quite) low-level translation of Boolector's API.
-
-## Example.
-
-This program (`API_Usage_Examples.hs`)
-```haskell
 import qualified Boolector as B
 
 import Control.Monad.IO.Class
@@ -36,13 +26,3 @@ main = B.evalBoolector $ do
   my <- B.unsignedBvAssignment y
   assert (mx == 7) $ return ()
   assert (my == 5) $ return ()
-```
-
-## Installing, Licensing
-
-You can install `libboolector` globally by going into the `boolector-*`
-directory and running `make install`.
-
-The current license is poisonous and does not allow this software to be used in
-a commercial context nor as part of a submission to a competition or a similar
-event. This project will remain private until that changes.
