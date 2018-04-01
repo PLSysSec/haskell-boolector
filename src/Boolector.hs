@@ -735,7 +735,7 @@ signedBvAssignment node = do
 boolAssignment :: Node -> Boolector Bool
 boolAssignment node = do
     str <- bvAssignment node
-    return $ case str of
+    liftIO $ evaluate $ case str of
         "0" -> False
         "1" -> True
         _   -> error $ "boolAssignment: not boolean: " ++ str
