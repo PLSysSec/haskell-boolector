@@ -2,9 +2,10 @@ import qualified Boolector as B
 
 import Control.Monad.IO.Class
 import Control.Exception (assert)
+import Control.Concurrent
 
 main :: IO ()
-main = B.evalBoolector $ do
+main = B.evalBoolectorTimeout 1000 $ do
   u8 <- B.bitvecSort 8
   
   c <- B.unsignedInt 35 u8

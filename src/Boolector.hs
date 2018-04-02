@@ -21,6 +21,7 @@ TODO: this library leaks memory like a firehose, make it less so
 module Boolector ( -- * Boolector monadic computations
                    Boolector
                  , evalBoolector
+                 , evalBoolectorTimeout
                   -- ** Options and configurations
                  , Option(..)
                  , setOpt
@@ -163,7 +164,8 @@ import qualified Boolector.Foreign as B
 
 import Data.Char (isDigit)
 import Control.Monad.State.Strict
-import Control.Exception (finally, evaluate)
+import Control.Exception hiding (assert)
+import Control.Concurrent
 
 import Prelude hiding (read, not, and, or, const, concat)
 import qualified Prelude as Prelude
@@ -179,6 +181,22 @@ newtype BoolectorState = BoolectorState { unBoolectorState :: B.Btor }
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
     deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO)
 
+-- | Like 'evalBoolector' but set a timeout in milliseconds.
+evalBoolectorTimeout :: Int -> Boolector a -> IO a
+evalBoolectorTimeout time action = do
+  term <- newMVar 0
+  bracket (createBoolectorState term) deleteBoolectorState $ \btorState -> do
+    -- thread A: execute boolector formula
+    void $ forkIO $ do threadDelay $ time * 1000
+                       putMVar term 1 -- this will cause boolector eval to fail if not done
+    evalStateT (unBoolector action) btorState
+      `onException` fail "boolector timed out"
+    where createBoolectorState term = do
+            btorState@(BoolectorState b) <- newBoolectorState
+            B.setTerm b $ \_ -> do
+              readMVar term
+            return btorState
+          deleteBoolectorState btorState = B.delete (unBoolectorState btorState)
 
 -- | Evaluate a Boolector action with default configurations.
 evalBoolector :: Boolector a -> IO a
@@ -186,11 +204,14 @@ evalBoolector action = do
   btorState <- newBoolectorState
   evalStateT (unBoolector action) btorState
     `finally` B.delete (unBoolectorState btorState)
-    where newBoolectorState = do
-            b <- B.new
-            B.setOpt b BTOR_OPT_MODEL_GEN 2
-            B.setOpt b BTOR_OPT_AUTO_CLEANUP 1
-            return $ BoolectorState b
+
+-- | Create new Boolector state
+newBoolectorState :: IO BoolectorState
+newBoolectorState = do
+  b <- B.new
+  B.setOpt b BTOR_OPT_MODEL_GEN 2
+  B.setOpt b BTOR_OPT_AUTO_CLEANUP 1
+  return $ BoolectorState b
 
 -- | Set option. See btortypes.h
 setOpt :: Option -> Int -> Boolector ()
