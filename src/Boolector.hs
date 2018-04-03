@@ -22,6 +22,12 @@ module Boolector ( -- * Boolector monadic computations
                    Boolector
                  , evalBoolector
                  , evalBoolectorTimeout
+                  -- ** Boolector state (for incremental solving)
+                 , BoolectorState
+                 , newBoolectorState
+                 , newBoolectorStateWithTimeout
+                 , deleteBoolectorState
+                 , evalBoolectorWithState
                   -- ** Options and configurations
                  , Option(..)
                  , setOpt
@@ -177,33 +183,26 @@ import qualified Prelude as Prelude
 -- | Solver state
 newtype BoolectorState = BoolectorState { unBoolectorState :: B.Btor }
 
-
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
     deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO)
 
 -- | Like 'evalBoolector' but set a timeout in milliseconds.
 evalBoolectorTimeout :: Int -> Boolector a -> IO a
-evalBoolectorTimeout time action = do
-  term <- newMVar 0
-  bracket (createBoolectorState term) deleteBoolectorState $ \btorState -> do
-    -- thread A: execute boolector formula
-    void $ forkIO $ do threadDelay $ time * 1000
-                       putMVar term 1 -- this will cause boolector eval to fail if not done
-    evalStateT (unBoolector action) btorState
+evalBoolectorTimeout time action =
+  bracket (newBoolectorStateWithTimeout time) deleteBoolectorState $ \btorState ->
+    fst `liftM` evalBoolectorWithState btorState action
       `onException` fail "boolector timed out"
-    where createBoolectorState term = do
-            btorState@(BoolectorState b) <- newBoolectorState
-            B.setTerm b $ \_ -> do
-              readMVar term
-            return btorState
-          deleteBoolectorState btorState = B.delete (unBoolectorState btorState)
 
 -- | Evaluate a Boolector action with default configurations.
 evalBoolector :: Boolector a -> IO a
-evalBoolector action = do
-  btorState <- newBoolectorState
-  evalStateT (unBoolector action) btorState
-    `finally` B.delete (unBoolectorState btorState)
+evalBoolector action =
+  bracket newBoolectorState deleteBoolectorState $ \btorState ->
+    fst `liftM` evalBoolectorWithState btorState action
+
+-- | Like 'evalBoolector', but take an explicit starting BoolectorState, and
+-- return the final BoolectorState
+evalBoolectorWithState :: BoolectorState -> Boolector a -> IO (a, BoolectorState)
+evalBoolectorWithState bState act = runStateT (unBoolector act) bState
 
 -- | Create new Boolector state
 newBoolectorState :: IO BoolectorState
@@ -212,6 +211,22 @@ newBoolectorState = do
   B.setOpt b BTOR_OPT_MODEL_GEN 2
   B.setOpt b BTOR_OPT_AUTO_CLEANUP 1
   return $ BoolectorState b
+
+-- | Create new Boolector state, all computations in this state will be subject
+-- to a timeout
+newBoolectorStateWithTimeout :: Int -> IO BoolectorState
+newBoolectorStateWithTimeout time = do
+  term <- newMVar 0
+  btorState@(BoolectorState b) <- newBoolectorState
+  B.setTerm b $ \_ -> do
+    readMVar term
+  void $ forkIO $ do threadDelay $ time * 1000
+                     putMVar term 1 -- this will cause boolector eval to fail if not done
+  return btorState
+
+-- | Delete a Boolector state
+deleteBoolectorState :: BoolectorState -> IO ()
+deleteBoolectorState bState = B.delete (unBoolectorState bState)
 
 -- | Set option. See btortypes.h
 setOpt :: Option -> Int -> Boolector ()
