@@ -8,8 +8,6 @@ all: download setup build
 
 .PHONY: download
 download:
-	-rm $(BTOR)$(EXT)
-	wget http://fmv.jku.at/boolector/$(BTOR)$(EXT)
 	-rm -rf $(BTOR)
 	tar xvfj $(BTOR)$(EXT)
 	-rm $(BTOR)$(EXT)
