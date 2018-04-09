@@ -186,11 +186,9 @@ evalBoolectorTimeout :: Int -> Boolector a -> IO a
 evalBoolectorTimeout time action = do
   term <- newMVar 0
   bracket (createBoolectorState term) deleteBoolectorState $ \btorState -> do
-    -- thread A: execute boolector formula
     void $ forkIO $ do threadDelay $ time * 1000
                        putMVar term 1 -- this will cause boolector eval to fail if not done
     evalStateT (unBoolector action) btorState
-      `onException` fail "boolector timed out"
     where createBoolectorState term = do
             btorState@(BoolectorState b) <- newBoolectorState
             B.setTerm b $ \_ -> do

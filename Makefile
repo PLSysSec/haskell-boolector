@@ -1,5 +1,7 @@
 BTOR=boolector-2.4.1-with-lingeling-bbc
 EXT=.tar.bz2
+DFLAGS=
+# use -g for debug
 
 .PHONY: all
 all: download setup build
@@ -37,13 +39,13 @@ build: setup build-lingeling build-boolector
 .ONESHELL:
 build-lingeling:
 	cd $(BTOR)/lingeling
-	./configure.sh -fPIC 
+	./configure.sh $(DFLAGS) -fPIC
 	make
 
 .ONESHELL:
 build-boolector:
 	cd $(BTOR)/boolector 
-	./configure.sh -shared
+	./configure.sh $(DFLAGS) -shared
 	make
 
 clean:
