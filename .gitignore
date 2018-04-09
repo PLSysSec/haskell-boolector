@@ -1,8 +1,10 @@
 *~
 *.o
 *.hi
+.stack-work
 dist
-boolector-2.0.1-with-lingeling-azd/
+boolector
+boolector-2.4.1-with-lingeling-bbc
 cbits
 src/Boolector/Foreign.chi
 src/Boolector/Foreign.chs.h
