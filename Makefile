@@ -10,7 +10,6 @@ all: download setup build
 download:
 	-rm -rf $(BTOR)
 	tar xvfj $(BTOR)$(EXT)
-	-rm $(BTOR)$(EXT)
 	ln -s $(BTOR) boolector
 
 .PHONY: setup setup-lingeling setup-boolector
