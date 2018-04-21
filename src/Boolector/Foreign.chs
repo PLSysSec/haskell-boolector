@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneDeriving #-}
 module Boolector.Foreign where
 
 import Foreign
@@ -23,12 +24,15 @@ import Control.Monad
 
 -- | Boolector instances
 {#pointer *Btor as Btor foreign newtype #}
+deriving instance Eq (Btor)
 
 -- | AST node.
 {#pointer *BoolectorNode as Node foreign newtype #}
+deriving instance Eq (Node)
 
 -- | Sort.
 {#pointer *BoolectorAnonymous as Sort foreign newtype #}
+deriving instance Eq (Sort)
 
 -- | Solver option.
 {# enum define Option {

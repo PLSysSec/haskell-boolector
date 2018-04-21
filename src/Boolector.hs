@@ -182,6 +182,7 @@ import qualified Prelude as Prelude
 
 -- | Solver state
 newtype BoolectorState = BoolectorState { unBoolectorState :: B.Btor }
+    deriving (Eq)
 
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
     deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO)
