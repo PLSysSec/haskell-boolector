@@ -24,15 +24,18 @@ import Control.Monad
 
 -- | Boolector instances
 {#pointer *Btor as Btor foreign newtype #}
-deriving instance Eq (Btor)
+deriving instance Eq Btor
+deriving instance Ord Btor
 
 -- | AST node.
 {#pointer *BoolectorNode as Node foreign newtype #}
-deriving instance Eq (Node)
+deriving instance Eq Node
+deriving instance Ord Node
 
 -- | Sort.
 {#pointer *BoolectorAnonymous as Sort foreign newtype #}
-deriving instance Eq (Sort)
+deriving instance Eq Sort
+deriving instance Ord Sort
 
 -- | Solver option.
 {# enum define Option {
