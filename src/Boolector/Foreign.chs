@@ -22,8 +22,8 @@ import Control.Monad
   BOOLECTOR_UNSAT as Unsat
   } deriving (Eq, Ord, Show ) #}
 
--- | Boolector instances
-{#pointer *Btor as Btor foreign newtype #}
+-- | Boolector instances.
+{#pointer *Btor as Btor foreign finalizer delete newtype #}
 deriving instance Eq Btor
 deriving instance Ord Btor
 
@@ -114,9 +114,6 @@ deriving instance Ord Sort
 
 -- | Create a new instance of Boolector.
 {#fun new as ^ { } -> `Btor'  #}
-
--- | Delete a boolector instance and free its resources.
-{#fun delete as ^ { `Btor' } -> `()' #}
 
 -- | Set option. See btortypes.h
 {#fun set_opt as ^ { `Btor', `Option', `Int' } -> `()' #}
