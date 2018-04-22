@@ -3,14 +3,6 @@
 
 This module presents Boolector functions via a monadic API similar to Z3's.
 
-Typical usage:
-
-@
-
-@
-
-TODO: this library leaks memory like a firehose, make it less so
-
 -}
 
 {-# language CPP #-}
@@ -166,6 +158,11 @@ import Boolector.Foreign (Option(..), Status(..), Node, Sort)
 import qualified Boolector.Foreign as B
 
 import Data.Char (isDigit)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+
 import Control.Monad.State.Strict
 import Control.Exception hiding (assert)
 import Control.Concurrent
@@ -177,9 +174,9 @@ import qualified Prelude as Prelude
 -- Boolector monad
 --
 
--- | Solver state.
-newtype BoolectorState = BoolectorState { unBoolectorState :: B.Btor }
-    deriving (Eq, Ord)
+-- | Solver state and cache
+data BoolectorState = BoolectorState { unBoolectorState :: B.Btor 
+                                     , unBoolectorCache :: BoolectorCache }
 
 -- | Bolector monad, keeping track of underlying solver state.
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
@@ -200,10 +197,10 @@ newBoolectorState Nothing = do
   b <- B.new
   B.setOpt b BTOR_OPT_MODEL_GEN 2
   B.setOpt b BTOR_OPT_AUTO_CLEANUP 1
-  return $ BoolectorState b
+  return $ BoolectorState b emptyBoolectorCache
 newBoolectorState (Just time) = do
   term <- newMVar 0
-  btorState@(BoolectorState b) <- newBoolectorState Nothing
+  btorState@(BoolectorState b _) <- newBoolectorState Nothing
   B.setTerm b $ \_ -> do
     readMVar term
   void $ forkIO $ do threadDelay $ time * 1000
@@ -317,8 +314,10 @@ signedInt :: Integer -> Sort -> Boolector Node
 signedInt i sort = liftBoolector2 B.int (fromIntegral i) sort
 
 -- | Create a bit vector variable of sort ``sort``.
+--
+-- The name must be unique.
 var :: Sort -> String -> Boolector Node
-var = liftBoolector2 B.var
+var = createNamedNode B.var
 
 -- | Create the one's complement of bit vector ``node``.
 not :: Node -> Boolector Node
@@ -592,7 +591,7 @@ sgte = liftBoolector2 B.sgte
 --
 -- The name must be unique.
 array :: Sort -> String -> Boolector Node
-array = liftBoolector2 B.array
+array = createNamedNode B.array
 
 -- | Create a read on array ``n_array`` at position ``n_index``.
 read :: Node -- ^ Array operand.
@@ -621,8 +620,7 @@ write = liftBoolector3 B.write
 --
 -- The name must be unique.
 uf :: Sort -> String -> Boolector Node
-uf = liftBoolector2 B.uf
-
+uf = createNamedNode B.uf
 
 -- | Create function parameter of sort ``sort``.
 --
@@ -765,19 +763,46 @@ boolAssignment node = do
 
 -- | Create Boolean sort.
 boolSort :: Boolector Sort
-boolSort = liftBoolector0 B.boolSort
+boolSort = do
+  sc <- getSortCache
+  case scBool sc of
+    Just srt -> return srt
+    _ -> do srt <- liftBoolector0 B.boolSort
+            setSortCache $ sc { scBool = Just srt }
+            return srt
 
 -- | Create bit vector sort of bit width ``width``.
 bitvecSort :: Int -> Boolector Sort
-bitvecSort = liftBoolector1 B.bitvecSort
+bitvecSort nr = do
+  sc <- getSortCache
+  let bvMap = scBitVec sc 
+  case IntMap.lookup nr bvMap of
+    Just srt -> return srt
+    _ -> do srt <- liftBoolector1 B.bitvecSort nr
+            setSortCache $ sc { scBitVec = IntMap.insert nr srt bvMap }
+            return srt
 
 -- | Create function sort.
 funSort :: [Sort] -> Sort -> Boolector Sort
-funSort = liftBoolector2 B.funSort
+funSort args ret = do
+  sc <- getSortCache
+  let funMap = scFun sc 
+  case Map.lookup (ret, args) funMap of
+    Just srt -> return srt
+    _ -> do srt <- liftBoolector2 B.funSort args ret
+            setSortCache $ sc { scFun = Map.insert (ret, args) srt funMap }
+            return srt
 
 -- | Create array sort.
 arraySort :: Sort -> Sort -> Boolector Sort
-arraySort = liftBoolector2 B.arraySort
+arraySort dom rng = do
+  sc <- getSortCache
+  let arrMap = scArray sc 
+  case Map.lookup (dom, rng) arrMap of
+    Just srt -> return srt
+    _ -> do srt <- liftBoolector2 B.arraySort dom rng
+            setSortCache $ sc { scArray = Map.insert (dom, rng) srt arrMap }
+            return srt
 
 -- | Determine if ``n0`` and ``n1`` have the same sort or not.
 isEqualSort :: Node -> Node -> Boolector Bool
@@ -847,3 +872,60 @@ liftBoolector3 :: (B.Btor -> a -> b -> c -> IO d) -> a -> b -> c -> Boolector d
 liftBoolector3 f x1 x2 x3 = do
   s <- get
   liftIO $ f (unBoolectorState s) x1 x2 x3
+
+--
+-- Solver cache
+--
+
+-- | Cache sorts and
+data BoolectorCache = BoolectorCache {
+    sortCache :: SortCache
+  , varCache  :: VarCache
+  }
+
+emptyBoolectorCache :: BoolectorCache
+emptyBoolectorCache = BoolectorCache emptySortCache Map.empty
+
+-- | Cache sorts
+data SortCache = SortCache {
+    scBool   :: Maybe Sort                -- ^ Bool sort
+  , scBitVec :: IntMap Sort               -- ^ BitVector sorts
+  , scFun    :: Map (Sort, [Sort]) Sort   -- ^ Function sorts
+  , scArray  :: Map (Sort, Sort) Sort     -- ^ Array sorts
+  }
+
+emptySortCache :: SortCache
+emptySortCache = SortCache Nothing IntMap.empty Map.empty Map.empty
+
+getSortCache :: Boolector SortCache
+getSortCache = (sortCache . unBoolectorCache) `liftM` get
+
+setSortCache :: SortCache -> Boolector ()
+setSortCache sc = do
+  s0 <- get
+  put $ s0 { unBoolectorCache = (unBoolectorCache s0) { sortCache = sc } }
+
+
+-- | Variable/uf cache
+type VarCache = Map (String, Sort) Node
+
+getVarCache :: Boolector VarCache
+getVarCache = (varCache . unBoolectorCache) `liftM` get
+
+setVarCache :: VarCache -> Boolector ()
+setVarCache vc = do
+  s0 <- get
+  put $ s0 { unBoolectorCache = (unBoolectorCache s0) { varCache = vc } }
+
+
+-- | Create a new named node given a constructor or return it from variable
+-- cache. The name must be unique.
+createNamedNode :: (B.Btor -> Sort -> String -> IO Node)
+                -> Sort -> String -> Boolector Node
+createNamedNode ctor sort name = do
+  vc <- getVarCache
+  case Map.lookup (name, sort) vc of
+    Just srt -> return srt
+    _ -> do node <- liftBoolector2 ctor sort name
+            setVarCache $ Map.insert (name, sort) node vc
+            return node
