@@ -12,6 +12,7 @@ This module presents Boolector functions via a monadic API similar to Z3's.
 
 module Boolector ( -- * Boolector monadic computations
                    Boolector
+                 , BoolectorMonad(..)
                  , evalBoolector
                  , runBoolector
                   -- ** Boolector state
@@ -173,6 +174,15 @@ import qualified Prelude as Prelude
 --
 -- Boolector monad
 --
+
+-- | Type class for monads that wish to perform symbolic computations
+class (MonadIO m) => BoolectorMonad m where
+  getBoolectorState :: m BoolectorState
+  putBoolectorState :: BoolectorState -> m ()
+
+instance BoolectorMonad Boolector where
+  getBoolectorState = get
+  putBoolectorState = put
 
 -- | Solver state and cache
 data BoolectorState = BoolectorState { unBoolectorState :: B.Btor 
