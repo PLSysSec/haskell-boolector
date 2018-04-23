@@ -179,6 +179,12 @@ import qualified Prelude as Prelude
 class (MonadIO m) => BoolectorMonad m where
   getBoolectorState :: m BoolectorState
   putBoolectorState :: BoolectorState -> m ()
+  liftBoolector     :: Boolector a -> m a
+  liftBoolector  act = do
+    s0 <- getBoolectorState
+    (res, s1) <- liftIO $ runBoolector s0 act
+    putBoolectorState s1
+    return res
 
 instance BoolectorMonad Boolector where
   getBoolectorState = get
