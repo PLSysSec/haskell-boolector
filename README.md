@@ -1,12 +1,20 @@
-# Haskell Binding for SMT Solver Boolector.
+# Haskell binding for the Boolector SMT Solver
 
-<http://fmv.jku.at/boolector/> 
+This is a simple library for writing SMT queries against the Boolector SMT
+solver.
 
-The binding is a (quite) low-level translation of Boolector's API.
+## Install
+
+1. Install the Boolector library from <https://github.com/Boolector/boolector>.
+
+   On Arch Linux, you can install Boolector (and the Lingeling SAT solver)
+   with: `yaourt -S boolector-git`
+
+2. `cabal install boolector`
 
 ## Example
 
-This program (`API_Usage_Examples.hs`) shows basic API usage.
+This program (`test/API_Usage_Examples.hs`) shows basic API usage.
 
 ```haskell
 import qualified Boolector as B
@@ -40,12 +48,3 @@ main = do
     assert (mx == 7) $ return ()
     assert (my == 5) $ return ()
 ```
-
-## Installing, Licensing
-
-You can install `libboolector` globally by going into the `boolector-*`
-directory and running `make install`.
-
-The current license is poisonous and does not allow this software to be used in
-a commercial context nor as part of a submission to a competition or a similar
-event. This project will remain private until that changes.
