@@ -30,7 +30,7 @@ import Control.Monad
   } deriving (Eq, Ord, Show ) #}
 
 -- | Boolector instances.
-{#pointer *Btor as Btor foreign finalizer delete newtype #}
+{#pointer *Btor as Btor foreign newtype #}
 deriving instance Eq Btor
 deriving instance Ord Btor
 
@@ -146,7 +146,23 @@ BTOR_OPT_NUM_OPTS                      as OPT_NUM_OPTS
 --
 
 -- | Create a new instance of Boolector.
-{#fun new as ^ { } -> `Btor'  #}
+new :: IO (Btor)
+new = do
+ ptrBtor <- new'_ 
+ -- run delete on the btor at the end
+ foreignPtrBtor <- newForeignPtr boolector_delete ptrBtor
+ -- run release_all before delete
+ addForeignPtrFinalizer boolector_release_all foreignPtrBtor 
+ return $ Btor foreignPtrBtor
+
+foreign import ccall "boolector_new"
+  new'_ :: IO (Ptr Btor)
+
+foreign import ccall "&boolector_delete"
+  boolector_delete :: FinalizerPtr Btor
+
+foreign import ccall "&boolector_release_all"
+  boolector_release_all :: FinalizerPtr Btor
 
 -- | Push new context levels.
 {#fun push as ^ { `Btor', `CUInt' } -> `()' #}
@@ -236,12 +252,6 @@ foreign import ccall "boolector_set_term"
 
 -- | Copy expression (increments reference counter).
 {#fun copy as ^ { `Btor' , `Node' } -> `Node' #}
-
--- | Release expression (decrements reference counter).
-{#fun release as ^ { `Btor' , `Node' } -> `()' #}
-
--- | Release all expressions and sorts.
-{#fun release_all as ^ { `Btor' } -> `()' #}
 
 -- | Create bit vector constant representing the bit vector @bits@.
 {#fun const as ^ { `Btor' , `String' } -> `Node' #}
@@ -717,9 +727,6 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 
 -- | Create array sort.
 {#fun array_sort as ^ { `Btor' , `Sort', `Sort' } -> `Sort' #}
-
--- | Release sort (decrements reference counter).
-{#fun release_sort as ^ { `Btor' , `Sort' } -> `()' #}
 
 -- | Determine if @n0@ and @n1@ have the same sort or not.
 {#fun is_equal_sort as ^ { `Btor' , `Node', `Node' } -> `Bool' #}
