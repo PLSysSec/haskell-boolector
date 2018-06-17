@@ -58,3 +58,11 @@ Test-Suite UF_Example
   main-is: UF_Example.hs
   extra-libraries:  boolector
   hs-source-dirs: test
+
+Test-Suite Arith_Example
+  Build-Depends: base >= 4.7 && < 5
+               , boolector
+  Type: exitcode-stdio-1.0
+  main-is: Arith_Example.hs
+  extra-libraries:  boolector
+  hs-source-dirs: test

@@ -94,6 +94,8 @@ module Boolector ( -- * Boolector monadic computations
                  , failed
                  , fixateAssumptions
                  , resetAssumptions
+                 , push
+                 , pop
                  -- ** Variables and constants
                  , var
                  , const
@@ -329,6 +331,14 @@ resetAssumptions = liftBoolector0 B.resetAssumptions
 -- | Solve an input formula.
 sat :: MonadBoolector m => m Status
 sat = liftBoolector0 B.sat
+
+-- | Push new context levels.
+push :: MonadBoolector m => Word -> m ()
+push w = liftBoolector1 B.push (fromIntegral w)
+
+-- | Pop context levels.
+pop :: MonadBoolector m => Word -> m ()
+pop w = liftBoolector1 B.pop (fromIntegral w)
 
 -- | Solve an input formula and limit the search by the number of lemmas
 -- generated and the number of conflicts encountered by the underlying
