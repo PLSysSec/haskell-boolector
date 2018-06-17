@@ -1,3 +1,10 @@
+{- |
+
+   This module exports a subset of the low-level C Boolector API to Haskell
+   code.  In general, you don't want to use this module and should use the
+   'Boolector' module instead.
+
+-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Boolector.Foreign where
 
@@ -15,7 +22,7 @@ import Control.Monad
 -- Types
 --
 
--- | Status of formula.
+-- | Status.
 {# enum define Status {
   BOOLECTOR_UNKNOWN as Unknown,
   BOOLECTOR_SAT as Sat,
@@ -39,73 +46,98 @@ deriving instance Ord Sort
 
 -- | Solver option.
 {# enum define Option {
-  BTOR_OPT_MODEL_GEN as                        BTOR_OPT_MODEL_GEN,
-  BTOR_OPT_INCREMENTAL as                      BTOR_OPT_INCREMENTAL,
-  BTOR_OPT_INCREMENTAL_SMT1 as                 BTOR_OPT_INCREMENTAL_SMT1,
-  BTOR_OPT_INPUT_FORMAT as                     BTOR_OPT_INPUT_FORMAT,
-  BTOR_OPT_OUTPUT_NUMBER_FORMAT as             BTOR_OPT_OUTPUT_NUMBER_FORMAT,
-  BTOR_OPT_OUTPUT_FORMAT as                    BTOR_OPT_OUTPUT_FORMAT,
-  BTOR_OPT_ENGINE as                           BTOR_OPT_ENGINE,
-  BTOR_OPT_SAT_ENGINE as                       BTOR_OPT_SAT_ENGINE,
-  BTOR_OPT_AUTO_CLEANUP as                     BTOR_OPT_AUTO_CLEANUP,
-  BTOR_OPT_PRETTY_PRINT as                     BTOR_OPT_PRETTY_PRINT,
-  BTOR_OPT_EXIT_CODES as                       BTOR_OPT_EXIT_CODES,
-  BTOR_OPT_SEED as                             BTOR_OPT_SEED,
-  BTOR_OPT_VERBOSITY as                        BTOR_OPT_VERBOSITY,
-  BTOR_OPT_LOGLEVEL as                         BTOR_OPT_LOGLEVEL,
-  BTOR_OPT_REWRITE_LEVEL as                    BTOR_OPT_REWRITE_LEVEL,
-  BTOR_OPT_SKELETON_PREPROC as                 BTOR_OPT_SKELETON_PREPROC,
-  BTOR_OPT_ACKERMANN as                        BTOR_OPT_ACKERMANN,
-  BTOR_OPT_BETA_REDUCE_ALL as                  BTOR_OPT_BETA_REDUCE_ALL,
-  BTOR_OPT_ELIMINATE_SLICES as                 BTOR_OPT_ELIMINATE_SLICES,
-  BTOR_OPT_VAR_SUBST as                        BTOR_OPT_VAR_SUBST,
-  BTOR_OPT_UCOPT as                            BTOR_OPT_UCOPT,
-  BTOR_OPT_MERGE_LAMBDAS as                    BTOR_OPT_MERGE_LAMBDAS,
-  BTOR_OPT_EXTRACT_LAMBDAS as                  BTOR_OPT_EXTRACT_LAMBDAS,
-  BTOR_OPT_NORMALIZE_ADD as                    BTOR_OPT_NORMALIZE_ADD,
-  BTOR_OPT_FUN_PREPROP as                      BTOR_OPT_FUN_PREPROP,
-  BTOR_OPT_FUN_PRESLS as                       BTOR_OPT_FUN_PRESLS,
-  BTOR_OPT_FUN_DUAL_PROP as                    BTOR_OPT_FUN_DUAL_PROP,
-  BTOR_OPT_FUN_DUAL_PROP_QSORT as              BTOR_OPT_FUN_DUAL_PROP_QSORT,
-  BTOR_OPT_FUN_JUST as                         BTOR_OPT_FUN_JUST,
-  BTOR_OPT_FUN_JUST_HEURISTIC as               BTOR_OPT_FUN_JUST_HEURISTIC,
-  BTOR_OPT_FUN_LAZY_SYNTHESIZE as              BTOR_OPT_FUN_LAZY_SYNTHESIZE,
-  BTOR_OPT_FUN_EAGER_LEMMAS as                 BTOR_OPT_FUN_EAGER_LEMMAS,
-  BTOR_OPT_SLS_NFLIPS as                       BTOR_OPT_SLS_NFLIPS,
-  BTOR_OPT_SLS_STRATEGY as                     BTOR_OPT_SLS_STRATEGY,
-  BTOR_OPT_SLS_JUST as                         BTOR_OPT_SLS_JUST,
-  BTOR_OPT_SLS_MOVE_GW as                      BTOR_OPT_SLS_MOVE_GW,
-  BTOR_OPT_SLS_MOVE_RANGE as                   BTOR_OPT_SLS_MOVE_RANGE,
-  BTOR_OPT_SLS_MOVE_SEGMENT as                 BTOR_OPT_SLS_MOVE_SEGMENT,
-  BTOR_OPT_SLS_MOVE_RAND_WALK as               BTOR_OPT_SLS_MOVE_RAND_WALK,
-  BTOR_OPT_SLS_PROB_MOVE_RAND_WALK as          BTOR_OPT_SLS_PROB_MOVE_RAND_WALK,
-  BTOR_OPT_SLS_MOVE_RAND_ALL as                BTOR_OPT_SLS_MOVE_RAND_ALL,
-  BTOR_OPT_SLS_MOVE_RAND_RANGE as              BTOR_OPT_SLS_MOVE_RAND_RANGE,
-  BTOR_OPT_SLS_MOVE_PROP as                    BTOR_OPT_SLS_MOVE_PROP,
-  BTOR_OPT_SLS_MOVE_PROP_N_PROP as             BTOR_OPT_SLS_MOVE_PROP_N_PROP,
-  BTOR_OPT_SLS_MOVE_PROP_N_SLS as              BTOR_OPT_SLS_MOVE_PROP_N_SLS,
-  BTOR_OPT_SLS_MOVE_PROP_FORCE_RW as           BTOR_OPT_SLS_MOVE_PROP_FORCE_RW,
-  BTOR_OPT_SLS_MOVE_INC_MOVE_TEST as           BTOR_OPT_SLS_MOVE_INC_MOVE_TEST,
-  BTOR_OPT_SLS_USE_RESTARTS as                 BTOR_OPT_SLS_USE_RESTARTS,
-  BTOR_OPT_SLS_USE_BANDIT as                   BTOR_OPT_SLS_USE_BANDIT,
-  BTOR_OPT_PROP_NPROPS as                      BTOR_OPT_PROP_NPROPS,
-  BTOR_OPT_PROP_USE_RESTARTS as                BTOR_OPT_PROP_USE_RESTARTS,
-  BTOR_OPT_PROP_USE_BANDIT as                  BTOR_OPT_PROP_USE_BANDIT,
-  BTOR_OPT_PROP_PATH_SEL as                    BTOR_OPT_PROP_PATH_SEL,
-  BTOR_OPT_PROP_PROB_USE_INV_VALUE as          BTOR_OPT_PROP_PROB_USE_INV_VALUE,
-  BTOR_OPT_PROP_PROB_FLIP_COND as              BTOR_OPT_PROP_PROB_FLIP_COND,
-  BTOR_OPT_PROP_PROB_FLIP_COND_CONST as        BTOR_OPT_PROP_PROB_FLIP_COND_CONST,
-  BTOR_OPT_PROP_FLIP_COND_CONST_DELTA as       BTOR_OPT_PROP_FLIP_COND_CONST_DELTA,
-  BTOR_OPT_PROP_FLIP_COND_CONST_NPATHSEL as    BTOR_OPT_PROP_FLIP_COND_CONST_NPATHSEL,
-  BTOR_OPT_PROP_PROB_SLICE_KEEP_DC as          BTOR_OPT_PROP_PROB_SLICE_KEEP_DC,
-  BTOR_OPT_PROP_PROB_CONC_FLIP as              BTOR_OPT_PROP_PROB_CONC_FLIP,
-  BTOR_OPT_PROP_PROB_SLICE_FLIP as             BTOR_OPT_PROP_PROB_SLICE_FLIP,
-  BTOR_OPT_PROP_PROB_EQ_FLIP as                BTOR_OPT_PROP_PROB_EQ_FLIP,
-  BTOR_OPT_PROP_PROB_AND_FLIP as               BTOR_OPT_PROP_PROB_AND_FLIP,
-  BTOR_OPT_PROP_NO_MOVE_ON_CONFLICT as         BTOR_OPT_PROP_NO_MOVE_ON_CONFLICT,
-  BTOR_OPT_AIGPROP_USE_RESTARTS as             BTOR_OPT_AIGPROP_USE_RESTARTS,
-  BTOR_OPT_AIGPROP_USE_BANDIT as               BTOR_OPT_AIGPROP_USE_BANDIT
-  } deriving (Eq, Ord, Show ) #}
+BTOR_OPT_MODEL_GEN                     as OPT_MODEL_GEN,
+BTOR_OPT_INCREMENTAL                   as OPT_INCREMENTAL,
+BTOR_OPT_INCREMENTAL_SMT1              as OPT_INCREMENTAL_SMT1,
+BTOR_OPT_INPUT_FORMAT                  as OPT_INPUT_FORMAT,
+BTOR_OPT_OUTPUT_NUMBER_FORMAT          as OPT_OUTPUT_NUMBER_FORMAT,
+BTOR_OPT_OUTPUT_FORMAT                 as OPT_OUTPUT_FORMAT,
+BTOR_OPT_ENGINE                        as OPT_ENGINE,
+BTOR_OPT_SAT_ENGINE                    as OPT_SAT_ENGINE,
+BTOR_OPT_AUTO_CLEANUP                  as OPT_AUTO_CLEANUP,
+BTOR_OPT_PRETTY_PRINT                  as OPT_PRETTY_PRINT,
+BTOR_OPT_EXIT_CODES                    as OPT_EXIT_CODES,
+BTOR_OPT_SEED                          as OPT_SEED,
+BTOR_OPT_VERBOSITY                     as OPT_VERBOSITY,
+BTOR_OPT_LOGLEVEL                      as OPT_LOGLEVEL,
+BTOR_OPT_REWRITE_LEVEL                 as OPT_REWRITE_LEVEL,
+BTOR_OPT_SKELETON_PREPROC              as OPT_SKELETON_PREPROC,
+BTOR_OPT_ACKERMANN                     as OPT_ACKERMANN,
+BTOR_OPT_BETA_REDUCE_ALL               as OPT_BETA_REDUCE_ALL,
+BTOR_OPT_ELIMINATE_SLICES              as OPT_ELIMINATE_SLICES,
+BTOR_OPT_VAR_SUBST                     as OPT_VAR_SUBST,
+BTOR_OPT_UCOPT                         as OPT_UCOPT,
+BTOR_OPT_MERGE_LAMBDAS                 as OPT_MERGE_LAMBDAS,
+BTOR_OPT_EXTRACT_LAMBDAS               as OPT_EXTRACT_LAMBDAS,
+BTOR_OPT_NORMALIZE                     as OPT_NORMALIZE,
+BTOR_OPT_NORMALIZE_ADD                 as OPT_NORMALIZE_ADD,
+BTOR_OPT_FUN_PREPROP                   as OPT_FUN_PREPROP,
+BTOR_OPT_FUN_PRESLS                    as OPT_FUN_PRESLS,
+BTOR_OPT_FUN_DUAL_PROP                 as OPT_FUN_DUAL_PROP,
+BTOR_OPT_FUN_DUAL_PROP_QSORT           as OPT_FUN_DUAL_PROP_QSORT,
+BTOR_OPT_FUN_JUST                      as OPT_FUN_JUST,
+BTOR_OPT_FUN_JUST_HEURISTIC            as OPT_FUN_JUST_HEURISTIC,
+BTOR_OPT_FUN_LAZY_SYNTHESIZE           as OPT_FUN_LAZY_SYNTHESIZE,
+BTOR_OPT_FUN_EAGER_LEMMAS              as OPT_FUN_EAGER_LEMMAS,
+BTOR_OPT_FUN_STORE_LAMBDAS             as OPT_FUN_STORE_LAMBDAS,
+BTOR_OPT_SLS_NFLIPS                    as OPT_SLS_NFLIPS,
+BTOR_OPT_SLS_STRATEGY                  as OPT_SLS_STRATEGY,
+BTOR_OPT_SLS_JUST                      as OPT_SLS_JUST,
+BTOR_OPT_SLS_MOVE_GW                   as OPT_SLS_MOVE_GW,
+BTOR_OPT_SLS_MOVE_RANGE                as OPT_SLS_MOVE_RANGE,
+BTOR_OPT_SLS_MOVE_SEGMENT              as OPT_SLS_MOVE_SEGMENT,
+BTOR_OPT_SLS_MOVE_RAND_WALK            as OPT_SLS_MOVE_RAND_WALK,
+BTOR_OPT_SLS_PROB_MOVE_RAND_WALK       as OPT_SLS_PROB_MOVE_RAND_WALK,
+BTOR_OPT_SLS_MOVE_RAND_ALL             as OPT_SLS_MOVE_RAND_ALL,
+BTOR_OPT_SLS_MOVE_RAND_RANGE           as OPT_SLS_MOVE_RAND_RANGE,
+BTOR_OPT_SLS_MOVE_PROP                 as OPT_SLS_MOVE_PROP,
+BTOR_OPT_SLS_MOVE_PROP_N_PROP          as OPT_SLS_MOVE_PROP_N_PROP,
+BTOR_OPT_SLS_MOVE_PROP_N_SLS           as OPT_SLS_MOVE_PROP_N_SLS,
+BTOR_OPT_SLS_MOVE_PROP_FORCE_RW        as OPT_SLS_MOVE_PROP_FORCE_RW,
+BTOR_OPT_SLS_MOVE_INC_MOVE_TEST        as OPT_SLS_MOVE_INC_MOVE_TEST,
+BTOR_OPT_SLS_USE_RESTARTS              as OPT_SLS_USE_RESTARTS,
+BTOR_OPT_SLS_USE_BANDIT                as OPT_SLS_USE_BANDIT,
+BTOR_OPT_PROP_NPROPS                   as OPT_PROP_NPROPS,
+BTOR_OPT_PROP_USE_RESTARTS             as OPT_PROP_USE_RESTARTS,
+BTOR_OPT_PROP_USE_BANDIT               as OPT_PROP_USE_BANDIT,
+BTOR_OPT_PROP_PATH_SEL                 as OPT_PROP_PATH_SEL,
+BTOR_OPT_PROP_PROB_USE_INV_VALUE       as OPT_PROP_PROB_USE_INV_VALUE,
+BTOR_OPT_PROP_PROB_FLIP_COND           as OPT_PROP_PROB_FLIP_COND,
+BTOR_OPT_PROP_PROB_FLIP_COND_CONST     as OPT_PROP_PROB_FLIP_COND_CONST,
+BTOR_OPT_PROP_FLIP_COND_CONST_DELTA    as OPT_PROP_FLIP_COND_CONST_DELTA,
+BTOR_OPT_PROP_FLIP_COND_CONST_NPATHSEL as OPT_PROP_FLIP_COND_CONST_NPATHSEL,
+BTOR_OPT_PROP_PROB_SLICE_KEEP_DC       as OPT_PROP_PROB_SLICE_KEEP_DC,
+BTOR_OPT_PROP_PROB_CONC_FLIP           as OPT_PROP_PROB_CONC_FLIP,
+BTOR_OPT_PROP_PROB_SLICE_FLIP          as OPT_PROP_PROB_SLICE_FLIP,
+BTOR_OPT_PROP_PROB_EQ_FLIP             as OPT_PROP_PROB_EQ_FLIP,
+BTOR_OPT_PROP_PROB_AND_FLIP            as OPT_PROP_PROB_AND_FLIP,
+BTOR_OPT_PROP_NO_MOVE_ON_CONFLICT      as OPT_PROP_NO_MOVE_ON_CONFLICT,
+BTOR_OPT_AIGPROP_USE_RESTARTS          as OPT_AIGPROP_USE_RESTARTS,
+BTOR_OPT_AIGPROP_USE_BANDIT            as OPT_AIGPROP_USE_BANDIT,
+BTOR_OPT_QUANT_SYNTH                   as OPT_QUANT_SYNTH,
+BTOR_OPT_QUANT_DUAL_SOLVER             as OPT_QUANT_DUAL_SOLVER,
+BTOR_OPT_QUANT_SYNTH_LIMIT             as OPT_QUANT_SYNTH_LIMIT,
+BTOR_OPT_QUANT_SYNTH_ITE_COMPLETE      as OPT_QUANT_SYNTH_ITE_COMPLETE,
+BTOR_OPT_QUANT_FIXSYNTH                as OPT_QUANT_FIXSYNTH,
+BTOR_OPT_QUANT_SYNTH_QI                as OPT_QUANT_SYNTH_QI,
+BTOR_OPT_QUANT_DER                     as OPT_QUANT_DER,
+BTOR_OPT_QUANT_CER                     as OPT_QUANT_CER,
+BTOR_OPT_QUANT_MINISCOPE               as OPT_QUANT_MINISCOPE,
+BTOR_OPT_DEFAULT_TO_CADICAL            as OPT_DEFAULT_TO_CADICAL,
+BTOR_OPT_SORT_EXP                      as OPT_SORT_EXP,
+BTOR_OPT_SORT_AIG                      as OPT_SORT_AIG,
+BTOR_OPT_SORT_AIGVEC                   as OPT_SORT_AIGVEC,
+BTOR_OPT_AUTO_CLEANUP_INTERNAL         as OPT_AUTO_CLEANUP_INTERNAL,
+BTOR_OPT_SIMPLIFY_CONSTRAINTS          as OPT_SIMPLIFY_CONSTRAINTS,
+BTOR_OPT_CHK_FAILED_ASSUMPTIONS        as OPT_CHK_FAILED_ASSUMPTIONS,
+BTOR_OPT_CHK_MODEL                     as OPT_CHK_MODEL,
+BTOR_OPT_CHK_UNCONSTRAINED             as OPT_CHK_UNCONSTRAINED,
+BTOR_OPT_PARSE_INTERACTIVE             as OPT_PARSE_INTERACTIVE,
+BTOR_OPT_SAT_ENGINE_LGL_FORK           as OPT_SAT_ENGINE_LGL_FORK,
+BTOR_OPT_INCREMENTAL_RW                as OPT_INCREMENTAL_RW,
+BTOR_OPT_DECLSORT_BV_WIDTH             as OPT_DECLSORT_BV_WIDTH,
+BTOR_OPT_NUM_OPTS                      as OPT_NUM_OPTS
+} deriving (Eq, Ord, Show ) #}
 
 
 --
@@ -115,44 +147,57 @@ deriving instance Ord Sort
 -- | Create a new instance of Boolector.
 {#fun new as ^ { } -> `Btor'  #}
 
--- | Set option. See btortypes.h
-{#fun set_opt as ^ { `Btor', `Option', `Int' } -> `()' #}
+-- | Push new context levels.
+{#fun push as ^ { `Btor', `CUInt' } -> `()' #}
 
--- | Get the current value of an option.
-{#fun get_opt as ^ { `Btor', `Option' } -> `Int' #}
+-- | Pop context levels.
+{#fun pop as ^ { `Btor', `CUInt' } -> `()' #}
+
+-- | Set a termination callback.
+setTerm :: Btor -> (Ptr () -> IO Int) -> IO ()
+setTerm b callback = do
+  cb <- makeWrapper callback
+  withBtor b $ \ b' -> setTerm'_ b' cb nullPtr
+
+foreign import ccall "wrapper"
+  makeWrapper :: (Ptr () -> IO Int) -> IO (FunPtr (Ptr () -> IO Int))
+
+foreign import ccall "boolector_set_term"
+  setTerm'_ :: Ptr Btor -> (FunPtr (Ptr () -> IO Int)) -> Ptr () -> IO ()
+
+--
+-- Options
+--
 
 -- | Set the SAT solver to use.
 --
 -- Currently supported: ``Lingeling``, ``PicoSAT``, and ``MiniSAT`.
 -- Returns non-zero value if setting the SAT solver was successful.
-{#fun set_sat_solver as ^ { `Btor', `String' } -> `Int' #}
+{#fun set_sat_solver as ^ { `Btor', `String' } -> `()' #}
+
+-- | Set option. See btortypes.h
+{#fun set_opt as ^ { `Btor', `Option', `CUInt' } -> `()' #}
+
+-- | Get the current value of an option.
+{#fun get_opt as ^ { `Btor', `Option' } -> `CUInt' #}
+
+-- | Check if Boolector has a given option.
+{#fun has_opt as ^ { `Btor', `Option' } -> `Bool' #}
 
 --
 -- Solving
 --
 
 -- | Add a constraint.
---
--- Use this function to assert ``node``.  Added constraints can not be deleted
--- anymore. After ``node`` has been asserted, it can be safely released by
--- boolector_release.
 {#fun assert as ^ { `Btor' , `Node' } -> `()' #}
 
 -- | Add an assumption.
---
--- Use this function to assume ``node``. You must enable Boolector's
--- incremental usage via 'set_opt' before you can add assumptions.  In contrast
--- to assertions added via 'assert', assumptions are discarded after each call
--- to 'sat'. Assumptions and assertions are logically combined via Boolean
--- ``and``. Assumption handling in Boolector is analogous to assumptions in
--- MiniSAT.
 {#fun assume as ^ { `Btor' , `Node' } -> `()' #}
 
 -- | Determine if assumption ``node`` is a failed assumption.
 --
 -- Failed assumptions are those assumptions, that force an input formula
--- to become unsatisfiable. Failed assumptions handling in Boolector is
--- analogous to failed assumptions in MiniSAT.
+-- to become unsatisfiable.
 {#fun failed as ^ { `Btor' , `Node' } -> `Bool' #}
 
 -- | Add all assumptions as assertions.
@@ -163,27 +208,18 @@ deriving instance Ord Sort
 
 -- | Solve an input formula.
 --
--- An input formula is defined by constraints added via boolector_assert.
+-- An input formula is defined by constraints added via 'assert'.
 -- You can guide the search for a solution to an input formula by making
--- assumptions via boolector_assume.
--- Note that assertions and assumptions are combined by boolean ``and``.
---
--- If you want to call this function multiple times, you must enable
--- Boolector's incremental usage mode via boolector_set_opt
--- before. Otherwise, this function may only be called once.
+-- assumptions via 'assume'.
 {#fun sat as ^ { `Btor' } -> `Status' #}
 
 -- | Solve an input formula and limit the search by the number of lemmas
 -- generated and the number of conflicts encountered by the underlying
 -- SAT solver.
 --
--- An input formula is defined by constraints added via boolector_assert.
+-- An input formula is defined by constraints added via 'assert'.
 -- You can guide the search for a solution to an input formula by making
--- assumptions via boolector_assume.
---
--- If you want to call this function multiple times then you must enable
--- Boolector's incremental usage mode via boolector_set_opt before.
--- Otherwise, this function can only be called once.
+-- assumptions via 'assume'.
 --
 -- Returns 'Sat' if the input formula is satisfiable (under possibly given
 -- assumptions), 'Usat' if the instance is unsatisfiable, and 'Unknown' if the
@@ -206,15 +242,21 @@ deriving instance Ord Sort
 -- | Release all expressions and sorts.
 {#fun release_all as ^ { `Btor' } -> `()' #}
 
+-- | Create bit vector constant representing the bit vector ``bits``.
+{#fun const as ^ { `Btor' , `String' } -> `Node' #}
+
+-- | Create bit vector constant representing the decimal number ``str``.
+{#fun constd as ^ { `Btor' , `Sort', `String' } -> `Node' #}
+
+-- | Create bit vector constant representing the hexadecimal number ``str``.
+{#fun consth as ^ { `Btor' , `Sort', `String' } -> `Node' #}
+
 -- | Create constant true. This is represented by the bit vector constant one
 -- with bit width one.
 {#fun true as ^ { `Btor'  } -> `Node' #}
 
 -- | Create bit vector constant zero with bit width one.
 {#fun false as ^ { `Btor' } -> `Node' #}
-
--- | Create bit vector constant representing the bit vector ``bits``.
-{#fun const as ^ { `Btor' , `String' } -> `Node' #}
 
 -- | Create bit vector constant zero of sort ``sort``.
 {#fun zero as ^ { `Btor', `Sort' } -> `Node' #}
@@ -243,12 +285,14 @@ deriving instance Ord Sort
 --
 -- The name must be unique.
 {#fun var as ^ { `Btor' , `Sort', `String' } -> `Node' #}
+
 -- | Create the one's complement of bit vector ``node``.
 {#fun not as ^ { `Btor' , `Node'} -> `Node' #}
 
 -- | Create the two's complement of bit vector ``node``.
 {#fun neg as ^ { `Btor' , `Node'} -> `Node' #}
--- |Create *or* reduction of node ``node``.
+
+-- | Create *or* reduction of node ``node``.
 --
 -- All bits of node ``node`` are combined by a Boolean *or*.
 {#fun redor as ^ { `Btor' , `Node'} -> `Node' #}
@@ -264,21 +308,24 @@ deriving instance Ord Sort
 {#fun redand as ^ { `Btor' , `Node'} -> `Node' #}
 
 -- | Create a bit vector slice of ``node`` from index ``upper`` to index ``lower``.
-{#fun slice as ^ { `Btor' , `Node', `Int', `Int'} -> `Node' #}
+{#fun slice as ^ { `Btor' , `Node', `CUInt', `CUInt'} -> `Node' #}
 
 -- | Create unsigned extension.
 --
 -- The bit vector ``node`` is padded with ``width`` * zeroes.
-{#fun uext as ^ { `Btor' , `Node', `Int'} -> `Node' #}
+{#fun uext as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 -- | Create signed extension.
 --
 -- The bit vector ``node`` is padded with ``width`` bits where the value
 -- depends on the value of the most significant bit of node ``n``.
-{#fun sext as ^ { `Btor' , `Node', `Int'} -> `Node' #}
+{#fun sext as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 -- | Create the concatenation of two bit vectors.
 {#fun concat as ^ { `Btor' , `Node', `Node'} -> `Node' #}
+
+-- | Create ``n`` concatenations of a given node ``node``.
+{#fun repeat as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 --
 -- Implications.
@@ -462,6 +509,7 @@ deriving instance Ord Sort
 
 -- | Create a read on array ``n_array`` at position ``n_index``.
 {#fun read as ^ { `Btor' , `Node', `Node'} -> `Node' #}
+
 -- | Create a write on array ``n_array`` at position ``n_index`` with value
 -- ``n_value``.
 --
@@ -504,8 +552,7 @@ fun hbtor hargs hret = withBtor hbtor $ \cbotr ->
         Node `liftM` newForeignPtr_ cptr
 
 foreign import ccall "boolector_fun"
-  fun'_ :: Ptr Btor -> Ptr (Ptr Node) -> CInt -> Ptr Node -> IO (Ptr Node)
-
+  fun'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO (Ptr Node)
 
 -- | Create a function application on function ``n_fun`` with arguments
 -- ``arg_nodes``.
@@ -518,7 +565,31 @@ apply hbtor hargs hfun = withBtor hbtor $ \cbotr ->
         Node `liftM` newForeignPtr_ cptr
 
 foreign import ccall "boolector_apply"
-  apply'_ :: Ptr Btor -> Ptr (Ptr Node) -> CInt -> Ptr Node -> IO (Ptr Node)
+  apply'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO (Ptr Node)
+
+-- | Create a universally quantified term.
+forall :: Btor -> [Node] -> Node -> IO Node
+forall hbtor hparams hbody = withBtor hbtor $ \cbotr ->
+  withNodes hparams $ \cparams ->
+    withArrayLen cparams $ \len cparamsPtr ->
+      withNode hbody $ \cbody -> do
+        cptr <- forall'_ cbotr cparamsPtr (fromIntegral len) cbody
+        Node `liftM` newForeignPtr_ cptr
+
+foreign import ccall "boolector_forall"
+  forall'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO (Ptr Node)
+
+-- | Create an existentially quantifed term.
+exists :: Btor -> [Node] -> Node -> IO Node
+exists hbtor hparams hbody = withBtor hbtor $ \cbotr ->
+  withNodes hparams $ \cparams ->
+    withArrayLen cparams $ \len cparamsPtr ->
+      withNode hbody $ \cbody -> do
+        cptr <- exists'_ cbotr cparamsPtr (fromIntegral len) cbody
+        Node `liftM` newForeignPtr_ cptr
+
+foreign import ccall "boolector_exists"
+  exists'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO (Ptr Node)
 
 -- | Helper function for executing list of Nodes.
 withNodes :: [Node] -> ([Ptr Node] -> IO a) -> IO a
@@ -530,18 +601,17 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 -- Accessors
 --
 
--- | Get the sort of given ``node``. The result does not have to be released.
+-- | Get the sort of given node.
 {#fun get_sort as ^ { `Btor' , `Node' } -> `Sort' #}
 
--- | Get the domain sort of given function node ``node``.
---
--- The result does not have to be released.
+-- | Get the domain sort of given function node node.
 {#fun fun_get_domain_sort as ^ { `Btor' , `Node' } -> `Sort' #}
 
--- | Get the codomain sort of given function node ``node``.
---
--- The result does not have to be released.
+-- | Get the codomain sort of given function node node.
 {#fun fun_get_codomain_sort as ^ { `Btor' , `Node' } -> `Sort' #}
+
+-- | Get the arity of function node.
+{#fun get_fun_arity as ^ { `Btor' , `Node' } -> `CUInt' #}
 
 -- | Get the symbol of an expression.
 {#fun get_symbol as ^ { `Btor' , `Node' } -> `String' #}
@@ -555,16 +625,19 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 -- elements.
 -- If the expression is a function, it returns the bit width of the function's
 -- return value.
-{#fun get_width as ^ { `Btor' , `Node' } -> `Int' #}
+{#fun get_width as ^ { `Btor' , `Node' } -> `CUInt' #}
 
 -- | Get the bit width of indices of ``n_array``.
-{#fun get_index_width as ^ { `Btor' , `Node' } -> `Int' #}
+{#fun get_index_width as ^ { `Btor' , `Node' } -> `CUInt' #}
 
 -- | Determine if given node is a constant node.
 {#fun is_const as ^ { `Btor' , `Node' } -> `Bool' #}
 
 -- | Determine if given node is a bit vector variable.
 {#fun is_var as ^ { `Btor' , `Node' } -> `Bool' #}
+
+-- | Determine if given node is an array node.
+{#fun is_array as ^ { `Btor' , `Node' } -> `Bool' #}
 
 -- | Determine if given node is an array node.
 {#fun is_array_var as ^ { `Btor' , `Node' } -> `Bool' #}
@@ -581,27 +654,38 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 -- | Determine if given node is a function node.
 {#fun is_fun as ^ { `Btor' , `Node' } -> `Bool' #}
 
+-- | Check if sorts of given arguments matches the function signature.
+-- Returns 'Nothing' if all sorts are correct; otherwise it returns the
+-- position of the incorrect argument.
+funSortCheck :: Btor -> [Node] -> Node -> IO (Maybe Int)
+funSortCheck hbtor hparams hfun = withBtor hbtor $ \cbotr ->
+  withNodes hparams $ \cparams ->
+    withArrayLen cparams $ \len cparamsPtr ->
+      withNode hfun $ \cfun -> do
+       rt <- funSortCheck'_ cbotr cparamsPtr (fromIntegral len) cfun
+       return $ if rt == -1
+                  then Nothing
+                  else Just $ fromIntegral rt
+
+foreign import ccall "boolector_fun_sort_check"
+  funSortCheck'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO CInt
+
 --
 -- Models.
 --
 
 -- | Generate an assignment string for bit vector expression if
--- boolector_sat has returned BOOLECTOR_SAT and model generation has been
--- enabled.
+-- 'sat' has returned 'Sat' and model generation has been enabled.
 --
 -- The expression can be an arbitrary bit vector expression which
 -- occurs in an assertion or current assumption. The assignment string has to
 -- be freed by 'free_bv_assignment'.
 {#fun bv_assignment as ^ { `Btor' , `Node' } -> `String' #}
 
-
--- {#fun free_bv_assignment as ^ { `Btor' , `ModelString' } -> `()' #}
--- {#fun array_assignment as ^ { `Btor' , } -> `()' #}
--- {#fun free_array_assignment as ^ { `Btor' , } -> `()' #}
--- {#fun uf_assignment as ^ { `Btor' , } -> `()' #}
--- {#fun free_uf_assignment as ^ { `Btor' , } -> `()' #}
--- {#fun print_model as ^ { `Btor' , } -> `()' #}
-
+-- | Free an assignment string for bit vectors.  TODO: we should change
+-- bv_assignment to return a ModelString and  use free to actually free the
+-- assignments. We're very leaky right now.
+{#fun free_bv_assignment as ^ { `Btor' , `String' } -> `()' #}
 
 --
 -- Sorts.
@@ -611,10 +695,7 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 {#fun bool_sort as ^ { `Btor'} -> `Sort' #}
 
 -- | Create bit vector sort of bit width ``width``.
-{#fun bitvec_sort as ^ { `Btor' , `Int' } -> `Sort' #}
-
-foreign import ccall "boolector_fun_sort"
-  funSort'_ :: Ptr Btor -> Ptr (Ptr Sort) -> CInt -> Ptr Sort -> IO (Ptr Sort)
+{#fun bitvec_sort as ^ { `Btor' , `CUInt' } -> `Sort' #}
 
 -- | Create function sort.
 funSort :: Btor -> [Sort] -> Sort -> IO Sort
@@ -624,6 +705,9 @@ funSort hbtor hargs hret = withBtor hbtor $ \cbotr ->
       withSort hret $ \cret -> do
         cptr <- funSort'_ cbotr cargsPtr (fromIntegral len) cret
         Sort `liftM` newForeignPtr_ cptr
+
+foreign import ccall "boolector_fun_sort"
+  funSort'_ :: Ptr Btor -> Ptr (Ptr Sort) -> CUInt -> Ptr Sort -> IO (Ptr Sort)
 
 -- | Helper function for executing list of Sorts.
 withSorts :: [Sort] -> ([Ptr Sort] -> IO a) -> IO a
@@ -651,18 +735,6 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 --
 -- Dumping
 --
-
--- | Set a termination callback.
-setTerm :: Btor -> (Ptr () -> IO Int) -> IO ()
-setTerm b callback = do
-  cb <- makeWrapper callback
-  withBtor b $ \ b' -> setTerm'_ b' cb nullPtr
-
-foreign import ccall "boolector_set_term"
-  setTerm'_ :: Ptr Btor -> (FunPtr (Ptr () -> IO Int)) -> Ptr () -> IO ()
-
-foreign import ccall "wrapper"
-  makeWrapper :: (Ptr () -> IO Int) -> IO (FunPtr (Ptr () -> IO Int))
 
 {#pointer *FILE as File foreign finalizer fclose newtype#}
 

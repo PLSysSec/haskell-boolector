@@ -39,6 +39,8 @@ module Boolector ( -- * Boolector monadic computations
                  -- ** Variables and constants
                  , var
                  , const
+                 , constd
+                 , consth
                  -- *** Booleans
                  , bool
                  , true
@@ -56,6 +58,9 @@ module Boolector ( -- * Boolector monadic computations
                  , uf
                  -- **** Parameters
                  , param
+                 -- *** Quantified terms
+                 , forall
+                 , exists
                  -- ** Operations
                  -- *** Implications and conditionals
                  , implies
@@ -122,11 +127,13 @@ module Boolector ( -- * Boolector monadic computations
                  , getSort
                  , funGetDomainSort
                  , funGetCodomainSort
+                 , funGetArity
                  , getSymbol
                  , getWidth
                  , getIndexWidth
                  , isConst
                  , isVar
+                 , isArray
                  , isArrayVar
                  , isParam
                  , isBoundParam
@@ -148,6 +155,7 @@ module Boolector ( -- * Boolector monadic computations
                  , isArraySort
                  , isBitvecSort
                  , isFunSort
+                 , funSortCheck
                  -- * Debug dumping
                  , dumpBtorNode
                  , dumpSmt2Node
@@ -163,6 +171,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+import Data.Word
 
 import Control.Monad.State.Strict
 import Control.Exception hiding (assert)
@@ -207,12 +216,14 @@ evalBoolector bState act = evalStateT (unBoolector act) bState
 runBoolector :: BoolectorState -> Boolector a -> IO (a, BoolectorState)
 runBoolector bState act = runStateT (unBoolector act) bState
 
--- | Create new Boolector state with optinal timeout
+-- | Create new Boolector state with optional timeout. By default, we enable
+-- support for model generation and incremental solving.
 newBoolectorState :: Maybe Int -> IO BoolectorState
 newBoolectorState Nothing = do
   b <- B.new
-  B.setOpt b BTOR_OPT_MODEL_GEN 2
-  B.setOpt b BTOR_OPT_AUTO_CLEANUP 1
+  B.setOpt b OPT_MODEL_GEN 2
+  B.setOpt b OPT_AUTO_CLEANUP 1
+  B.setOpt b OPT_INCREMENTAL 1
   return $ BoolectorState b emptyBoolectorCache
 newBoolectorState (Just time) = do
   term <- newMVar 0
@@ -224,12 +235,12 @@ newBoolectorState (Just time) = do
   return btorState
 
 -- | Set option. See btortypes.h
-setOpt :: Option -> Int -> Boolector ()
-setOpt = liftBoolector2 B.setOpt
+setOpt :: Option -> Word -> Boolector ()
+setOpt o w = liftBoolector2 B.setOpt o (fromIntegral w)
 
 -- | Get option. See btortypes.h
-getOpt :: Option -> Boolector Int
-getOpt = liftBoolector1 B.getOpt
+getOpt :: Option -> Boolector Word
+getOpt o = fromIntegral `liftM` liftBoolector1 B.getOpt o
 
 -- | Which sat solver to use.
 data SatSolver = Lingeling
@@ -238,10 +249,8 @@ data SatSolver = Lingeling
                deriving Show
 
 -- | Set the SAT solver to use. Returns 'True' if sucessfull.
-setSatSolver :: SatSolver -> Boolector Bool
-setSatSolver solver = do
-  i <- liftBoolector1 B.setSatSolver (show solver)
-  return (i /= 0)
+setSatSolver :: SatSolver -> Boolector ()
+setSatSolver solver = liftBoolector1 B.setSatSolver (show solver)
 
 -- | Add a constraint.
 assert :: Node -> Boolector ()
@@ -300,6 +309,14 @@ false = liftBoolector0 B.false
 -- | Create bit vector constant representing the bit vector ``bits``.
 const :: String -> Boolector Node
 const = liftBoolector1 B.const
+
+-- | Create bit vector constant representing the decimal number ``str``.
+constd :: Sort -> String -> Boolector Node
+constd = liftBoolector2 B.constd
+
+-- | Create bit vector constant representing the hexadecimal number ``str``.
+consth :: Sort -> String -> Boolector Node
+consth = liftBoolector2 B.consth
 
 -- | Create bit vector constant zero of sort ``sort``.
 zero :: Sort -> Boolector Node
@@ -363,23 +380,23 @@ redand = liftBoolector1 B.redand
 
 -- | Create a bit vector slice of ``node`` from index ``upper`` to index ``lower``.
 slice :: Node
-      -> Int -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of ``node``.
-      -> Int -- ^ Lower index which must be greater than or equal to zero, and less than or equal to ``upper``.
+      -> Word -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of ``node``.
+      -> Word -- ^ Lower index which must be greater than or equal to zero, and less than or equal to ``upper``.
       -> Boolector Node
-slice = liftBoolector3 B.slice
+slice n u l = (liftBoolector3 B.slice) n (fromIntegral u) (fromIntegral l)
 
 -- | Create unsigned extension.
 --
 -- The bit vector ``node`` is padded with ``width`` * zeroes.
-uext :: Node -> Int -> Boolector Node
-uext = liftBoolector2 B.uext
+uext :: Node -> Word -> Boolector Node
+uext n w = (liftBoolector2 B.uext) n $ fromIntegral w
 
 -- | Create signed extension.
 --
 -- The bit vector ``node`` is padded with ``width`` bits where the value
 -- depends on the value of the most significant bit of node ``n``.
-sext :: Node -> Int -> Boolector Node
-sext = liftBoolector2 B.sext
+sext :: Node -> Word -> Boolector Node
+sext n w = liftBoolector2 B.sext n (fromIntegral w)
 
 -- | Create the concatenation of two bit vectors.
 concat :: Node -> Node -> Boolector Node
@@ -667,6 +684,22 @@ apply = liftBoolector2 B.apply
 
 
 --
+-- Quantified terms
+--
+
+-- | Create a universally quantified term.
+forall :: [Node] -- ^ Quantified variables
+       -> Node   -- ^ Term where variables may occur
+       -> Boolector Node
+forall = liftBoolector2 B.forall
+
+-- | Create an existentially quantifed term.
+exists :: [Node] -- ^ Quantified variables
+       -> Node   -- ^ Term where variables may occur
+       -> Boolector Node
+exists = liftBoolector2 B.exists
+
+--
 -- Accessors
 --
 
@@ -686,6 +719,10 @@ funGetDomainSort = liftBoolector1 B.funGetDomainSort
 funGetCodomainSort :: Node -> Boolector Sort
 funGetCodomainSort = liftBoolector1 B.funGetCodomainSort
 
+-- | Get the arity of function node.
+funGetArity :: Node -> Boolector Word
+funGetArity n = fromIntegral `liftM` liftBoolector1 B.getFunArity n
+
 -- | Get the symbol of an expression.
 getSymbol :: Node -> Boolector String
 getSymbol = liftBoolector1 B.getSymbol
@@ -696,12 +733,12 @@ getSymbol = liftBoolector1 B.getSymbol
 -- elements.
 -- If the expression is a function, it returns the bit width of the function's
 -- return value.
-getWidth :: Node -> Boolector Int
-getWidth = liftBoolector1 B.getWidth
+getWidth :: Node -> Boolector Word
+getWidth n = fromIntegral `liftM` liftBoolector1 B.getWidth n
 
 -- | Get the bit width of indices of ``n_array``.
-getIndexWidth :: Node -> Boolector Int
-getIndexWidth = liftBoolector1 B.getIndexWidth
+getIndexWidth :: Node -> Boolector Word
+getIndexWidth n = fromIntegral `liftM` liftBoolector1 B.getIndexWidth n
 
 -- | Determine if given node is a constant node.
 isConst :: Node -> Boolector Bool
@@ -710,6 +747,10 @@ isConst = liftBoolector1 B.isConst
 -- | Determine if given node is a bit vector variable.
 isVar :: Node -> Boolector Bool
 isVar = liftBoolector1 B.isVar
+
+-- | Determine if given node is an array node.
+isArray :: Node -> Boolector Bool
+isArray = liftBoolector1 B.isArray
 
 -- | Determine if given node is an array node.
 isArrayVar :: Node -> Boolector Bool
@@ -788,8 +829,8 @@ boolSort = do
             return srt
 
 -- | Create bit vector sort of bit width ``width``.
-bitvecSort :: Int -> Boolector Sort
-bitvecSort nr = do
+bitvecSort :: Word -> Boolector Sort
+bitvecSort wnr = do
   sc <- getSortCache
   let bvMap = scBitVec sc 
   case IntMap.lookup nr bvMap of
@@ -797,6 +838,7 @@ bitvecSort nr = do
     _ -> do srt <- liftBoolector1 B.bitvecSort nr
             setSortCache $ sc { scBitVec = IntMap.insert nr srt bvMap }
             return srt
+  where nr = fromIntegral wnr
 
 -- | Create function sort.
 funSort :: [Sort] -> Sort -> Boolector Sort
@@ -835,6 +877,12 @@ isBitvecSort = liftBoolector1 B.isBitvecSort
 -- | Determine if ``sort`` is a function sort.
 isFunSort :: Sort -> Boolector Bool
 isFunSort = liftBoolector1 B.isFunSort
+
+-- | Check if sorts of given arguments matches the function signature.
+-- Returns 'Nothing' if all sorts are correct; otherwise it returns the
+-- position of the incorrect argument.
+funSortCheck :: [Node] -> Node -> Boolector (Maybe Int)
+funSortCheck = liftBoolector2 B.funSortCheck 
 
 
 --

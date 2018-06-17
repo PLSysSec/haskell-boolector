@@ -1,23 +1,14 @@
 name:                boolector
 version:             0.0.0.1
-synopsis:            bindings to SMT solver boolector
-description:         bindings to SMT solver boolector
-license:             AllRightsReserved
+synopsis:            Haskell Binding for the Boolector SMT Solver
+description:         Haskell Binding for the Boolector SMT Solver
+license:             MIT
 license-file:        LICENSE
-author:              Dein Stefan, Armin Biere
-maintainer:          johannes.waldmann@htwk-leipzig.de
-category:            Numeric
-build-type:          Custom
-cabal-version:       >=1.10
-
-extra-source-files:
-  build.sh
-
-custom-setup
-  setup-depends: base,
-                 Cabal,
-                 directory
-
+author:              Dein Stefan, Johannes Waldmann, Armin Biere
+maintainer:          deian@cs.ucsd.edu
+category:            Math, SMT, Theorem Provers, Formal Methods, Bit vectors
+build-type:          Simple
+cabal-version:       >= 1.10
 
 library
   hs-source-dirs: src
@@ -31,12 +22,10 @@ library
         mtl
 
   ghc-options: -Wall -fno-warn-orphans
-  default-language: Haskell2010
   build-tools:      c2hs
 
   extra-libraries:  boolector
   includes:         boolector.h
-
 
 Test-Suite API_Usage_Example
   Build-Depends: base >= 4.7 && < 5
