@@ -11,7 +11,7 @@ main = do
     u32 <- B.bitvecSort 32
 
     arr8x32 <- B.arraySort u8 u32
-    
+
     arr <- B.array arr8x32 "a"
 
     x <- B.var u8 "x"

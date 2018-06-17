@@ -1,7 +1,15 @@
 name:                boolector
 version:             0.0.0.1
-synopsis:            Haskell Binding for the Boolector SMT Solver
-description:         Haskell Binding for the Boolector SMT Solver
+synopsis:            Haskell bindings for the Boolector SMT solver
+description:
+
+    This library provides a high-level, monadic DSL for writing symbolic
+    computations atop the Boolector SMT solver (<https://github.com/Boolector/boolector>).
+    .
+    The API and its description is defined in the "Boolector" module.
+    .
+    Several examples can be found at: <https://github.com/PLSysSec/haskell-boolector/tree/master/test>
+
 license:             MIT
 license-file:        LICENSE
 author:              Dein Stefan, Johannes Waldmann, Armin Biere

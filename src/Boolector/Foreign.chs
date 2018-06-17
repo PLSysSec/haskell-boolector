@@ -45,6 +45,7 @@ deriving instance Eq Sort
 deriving instance Ord Sort
 
 -- | Solver option.
+-- See <https://github.com/Boolector/boolector/blob/47f94b39fb6e099195da043ddaf8d82e4b2aebc9/src/btortypes.h#L37>
 {# enum define Option {
 BTOR_OPT_MODEL_GEN                     as OPT_MODEL_GEN,
 BTOR_OPT_INCREMENTAL                   as OPT_INCREMENTAL,
@@ -171,7 +172,7 @@ foreign import ccall "boolector_set_term"
 
 -- | Set the SAT solver to use.
 --
--- Currently supported: ``Lingeling``, ``PicoSAT``, and ``MiniSAT`.
+-- Currently supported: @Lingeling@, @PicoSAT@, and @MiniSAT@.
 -- Returns non-zero value if setting the SAT solver was successful.
 {#fun set_sat_solver as ^ { `Btor', `String' } -> `()' #}
 
@@ -194,7 +195,7 @@ foreign import ccall "boolector_set_term"
 -- | Add an assumption.
 {#fun assume as ^ { `Btor' , `Node' } -> `()' #}
 
--- | Determine if assumption ``node`` is a failed assumption.
+-- | Determine if assumption @node@ is a failed assumption.
 --
 -- Failed assumptions are those assumptions, that force an input formula
 -- to become unsatisfiable.
@@ -242,13 +243,13 @@ foreign import ccall "boolector_set_term"
 -- | Release all expressions and sorts.
 {#fun release_all as ^ { `Btor' } -> `()' #}
 
--- | Create bit vector constant representing the bit vector ``bits``.
+-- | Create bit vector constant representing the bit vector @bits@.
 {#fun const as ^ { `Btor' , `String' } -> `Node' #}
 
--- | Create bit vector constant representing the decimal number ``str``.
+-- | Create bit vector constant representing the decimal number @str@.
 {#fun constd as ^ { `Btor' , `Sort', `String' } -> `Node' #}
 
--- | Create bit vector constant representing the hexadecimal number ``str``.
+-- | Create bit vector constant representing the hexadecimal number @str@.
 {#fun consth as ^ { `Btor' , `Sort', `String' } -> `Node' #}
 
 -- | Create constant true. This is represented by the bit vector constant one
@@ -258,73 +259,73 @@ foreign import ccall "boolector_set_term"
 -- | Create bit vector constant zero with bit width one.
 {#fun false as ^ { `Btor' } -> `Node' #}
 
--- | Create bit vector constant zero of sort ``sort``.
+-- | Create bit vector constant zero of sort @sort@.
 {#fun zero as ^ { `Btor', `Sort' } -> `Node' #}
 
--- | Create bit vector constant one of sort ``sort``.
+-- | Create bit vector constant one of sort @sort@.
 {#fun one as ^ { `Btor', `Sort' } -> `Node' #}
 
--- | Create bit vector constant of sort ``sort``, where each bit is set to one.
+-- | Create bit vector constant of sort @sort@, where each bit is set to one.
 {#fun ones as ^ { `Btor', `Sort' } -> `Node' #}
 
--- |  Create bit vector constant representing the unsigned integer ``u`` of
--- sort ``sort``.
+-- |  Create bit vector constant representing the unsigned integer @u@ of
+-- sort @sort@.
 --
 -- The constant is obtained by either truncating bits or by
 -- unsigned extension (padding with zeroes).
 {#fun unsigned_int as ^ { `Btor', `CUInt', `Sort' } -> `Node' #}
 
--- | Create bit vector constant representing the signed integer ``i`` of sort
--- ``sort``.
+-- | Create bit vector constant representing the signed integer @i@ of sort
+-- @sort@.
 --
 -- The constant is obtained by either truncating bits or by
 -- signed extension (padding with ones).
 {#fun int as ^ { `Btor', `CInt', `Sort' } -> `Node' #}
 
--- | Create a bit vector variable of sort ``sort``.
+-- | Create a bit vector variable of sort @sort@.
 --
 -- The name must be unique.
 {#fun var as ^ { `Btor' , `Sort', `String' } -> `Node' #}
 
--- | Create the one's complement of bit vector ``node``.
+-- | Create the one's complement of bit vector @node@.
 {#fun not as ^ { `Btor' , `Node'} -> `Node' #}
 
--- | Create the two's complement of bit vector ``node``.
+-- | Create the two's complement of bit vector @node@.
 {#fun neg as ^ { `Btor' , `Node'} -> `Node' #}
 
--- | Create *or* reduction of node ``node``.
+-- | Create *or* reduction of node @node@.
 --
--- All bits of node ``node`` are combined by a Boolean *or*.
+-- All bits of node @node@ are combined by a Boolean *or*.
 {#fun redor as ^ { `Btor' , `Node'} -> `Node' #}
 
--- | Create *xor* reduction of node ``node``.
+-- | Create *xor* reduction of node @node@.
 --
--- All bits of ``node`` are combined by a Boolean *xor*.
+-- All bits of @node@ are combined by a Boolean *xor*.
 {#fun redxor as ^ { `Btor' , `Node'} -> `Node' #}
 
--- | Create *and* reduction of node ``node``.
+-- | Create *and* reduction of node @node@.
 --
--- All bits of ``node`` are combined by a Boolean *and*.
+-- All bits of @node@ are combined by a Boolean *and*.
 {#fun redand as ^ { `Btor' , `Node'} -> `Node' #}
 
--- | Create a bit vector slice of ``node`` from index ``upper`` to index ``lower``.
+-- | Create a bit vector slice of @node@ from index @upper@ to index @lower@.
 {#fun slice as ^ { `Btor' , `Node', `CUInt', `CUInt'} -> `Node' #}
 
 -- | Create unsigned extension.
 --
--- The bit vector ``node`` is padded with ``width`` * zeroes.
+-- The bit vector @node@ is padded with @width@ * zeroes.
 {#fun uext as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 -- | Create signed extension.
 --
--- The bit vector ``node`` is padded with ``width`` bits where the value
--- depends on the value of the most significant bit of node ``n``.
+-- The bit vector @node@ is padded with @width@ bits where the value
+-- depends on the value of the most significant bit of node @n@.
 {#fun sext as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 -- | Create the concatenation of two bit vectors.
 {#fun concat as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
--- | Create ``n`` concatenations of a given node ``node``.
+-- | Create @n@ concatenations of a given node @node@.
 {#fun repeat as ^ { `Btor' , `Node', `CUInt'} -> `Node' #}
 
 --
@@ -359,9 +360,9 @@ foreign import ccall "boolector_set_term"
 
 -- | Create an if-then-else.
 --
--- If condition ``n_cond`` is true, then ``n_then`` is returned, else ``n_else``
+-- If condition @n_cond@ is true, then @n_then@ is returned, else @n_else@
 -- is returned.
--- Nodes ``n_then`` and ``n_else`` must be either both arrays or both bit vectors.
+-- Nodes @n_then@ and @n_else@ must be either both arrays or both bit vectors.
 {#fun cond as ^ { `Btor' , `Node', `Node', `Node'} -> `Node' #}
 
 --
@@ -388,31 +389,31 @@ foreign import ccall "boolector_set_term"
 
 -- | Create a logical shift left.
 --
--- Given node ``n1``, the value it represents is the number of zeroes shifted
--- into node ``n0`` from the right.
+-- Given node @n1@, the value it represents is the number of zeroes shifted
+-- into node @n0@ from the right.
 {#fun sll as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
 -- | Create a logical shift right.
 --
--- Given node ``n1``, the value it represents is the number of zeroes shifted
--- into node ``n0`` from the left.
+-- Given node @n1@, the value it represents is the number of zeroes shifted
+-- into node @n0@ from the left.
 {#fun srl as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
 -- | Create an arithmetic shift right.
 --
 -- Analogously to 'srl', but whether zeroes or ones are shifted in depends on
--- the most significant bit of ``n0``.
+-- the most significant bit of @n0@.
 {#fun sra as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
 -- | Create a rotate left.
 --
--- Given bit vector node ``n1``, the value it represents is the number of bits
--- by which node ``n0`` is rotated to the left.
+-- Given bit vector node @n1@, the value it represents is the number of bits
+-- by which node @n0@ is rotated to the left.
 {#fun rol as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 -- | Create a rotate right.
 --
--- Given bit vector node ``n1``, the value it represents is the number of bits by
--- which node ``n0`` is rotated to the right.
+-- Given bit vector node @n1@, the value it represents is the number of bits by
+-- which node @n0@ is rotated to the right.
 {#fun ror as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
 --
@@ -422,7 +423,7 @@ foreign import ccall "boolector_set_term"
 -- | Create bit vector addition.
 {#fun add as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
--- | Create bit vector expression that increments bit vector ``node`` by one.
+-- | Create bit vector expression that increments bit vector @node@ by one.
 {#fun inc as ^ { `Btor' , `Node' } -> `Node' #}
 
 -- | Create an unsigned bit vector addition overflow detection.
@@ -440,7 +441,7 @@ foreign import ccall "boolector_set_term"
 -- | Create a signed bit vector subtraction overflow detection.
 {#fun ssubo as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
--- | Create bit vector expression that decrements bit vector ``node`` by one.
+-- | Create bit vector expression that decrements bit vector @node@ by one.
 {#fun dec as ^ { `Btor' , `Node' } -> `Node' #}
 
 -- | Create a bitvector multiplication.
@@ -502,42 +503,42 @@ foreign import ccall "boolector_set_term"
 -- Array operations
 --
 
--- | Create a one-dimensional bit vector array with sort ``sort``.
+-- | Create a one-dimensional bit vector array with sort @sort@.
 --
 -- The name must be unique.
 {#fun array as ^ { `Btor' , `Sort', `String' } -> `Node' #}
 
--- | Create a read on array ``n_array`` at position ``n_index``.
+-- | Create a read on array @n_array@ at position @n_index@.
 {#fun read as ^ { `Btor' , `Node', `Node'} -> `Node' #}
 
--- | Create a write on array ``n_array`` at position ``n_index`` with value
--- ``n_value``.
+-- | Create a write on array @n_array@ at position @n_index@ with value
+-- @n_value@.
 --
 -- The array is updated at exactly one position, all other elements remain
--- unchanged. The bit width of ``n_index`` must be the same as the bit width of
--- the indices of ``n_array``. The bit width of ``n_value`` must be the same as
--- the bit width of the elements of ``n_array``.
+-- unchanged. The bit width of @n_index@ must be the same as the bit width of
+-- the indices of @n_array@. The bit width of @n_value@ must be the same as
+-- the bit width of the elements of @n_array@.
 {#fun write as ^ { `Btor' , `Node', `Node', `Node'} -> `Node' #}
 
 --
 -- Functions
 --
 
--- | Create an uninterpreted function with sort ``sort``.
+-- | Create an uninterpreted function with sort @sort@.
 --
 -- The name must be unique.
 {#fun uf as ^ { `Btor' , `Sort', `String' } -> `Node' #}
 
 
--- | Create function parameter of sort ``sort``.
+-- | Create function parameter of sort @sort@.
 --
 -- This kind of node is used to create parameterized expressions, which are
 -- used to create functions. Once a parameter is bound to a function, it
 -- cannot be re-used in other functions.
 {#fun param as ^ { `Btor' , `Sort', `String'} -> `Node' #}
 
--- | Create a function with body ``node`` parameterized over parameters
--- ``param_nodes``.
+-- | Create a function with body @node@ parameterized over parameters
+-- @param_nodes@.
 --
 -- This kind of node is similar to macros in the SMT-LIB standard 2.0.
 -- Note that as soon as a parameter is bound to a function, it can not be
@@ -554,8 +555,8 @@ fun hbtor hargs hret = withBtor hbtor $ \cbotr ->
 foreign import ccall "boolector_fun"
   fun'_ :: Ptr Btor -> Ptr (Ptr Node) -> CUInt -> Ptr Node -> IO (Ptr Node)
 
--- | Create a function application on function ``n_fun`` with arguments
--- ``arg_nodes``.
+-- | Create a function application on function @n_fun@ with arguments
+-- @arg_nodes@.
 apply :: Btor -> [Node] -> Node -> IO Node
 apply hbtor hargs hfun = withBtor hbtor $ \cbotr ->
   withNodes hargs $ \cargs ->
@@ -627,7 +628,7 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 -- return value.
 {#fun get_width as ^ { `Btor' , `Node' } -> `CUInt' #}
 
--- | Get the bit width of indices of ``n_array``.
+-- | Get the bit width of indices of @n_array@.
 {#fun get_index_width as ^ { `Btor' , `Node' } -> `CUInt' #}
 
 -- | Determine if given node is a constant node.
@@ -694,7 +695,7 @@ foreign import ccall "boolector_fun_sort_check"
 -- | Create Boolean sort.
 {#fun bool_sort as ^ { `Btor'} -> `Sort' #}
 
--- | Create bit vector sort of bit width ``width``.
+-- | Create bit vector sort of bit width @width@.
 {#fun bitvec_sort as ^ { `Btor' , `CUInt' } -> `Sort' #}
 
 -- | Create function sort.
@@ -720,16 +721,16 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 -- | Release sort (decrements reference counter).
 {#fun release_sort as ^ { `Btor' , `Sort' } -> `()' #}
 
--- | Determine if ``n0`` and ``n1`` have the same sort or not.
+-- | Determine if @n0@ and @n1@ have the same sort or not.
 {#fun is_equal_sort as ^ { `Btor' , `Node', `Node' } -> `Bool' #}
 
--- | Determine if ``sort`` is an array sort.
+-- | Determine if @sort@ is an array sort.
 {#fun is_array_sort as ^ { `Btor' , `Sort' } -> `Bool' #}
 
--- | Determine if ``sort`` is a bit-vector sort.
+-- | Determine if @sort@ is a bit-vector sort.
 {#fun is_bitvec_sort as ^ { `Btor' , `Sort' } -> `Bool' #}
 
--- | Determine if ``sort`` is a function sort.
+-- | Determine if @sort@ is a function sort.
 {#fun is_fun_sort as ^ { `Btor' , `Sort' } -> `Bool' #}
 
 --
@@ -741,14 +742,14 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 -- | libc's fopen
 {#fun fopen as ^ {`String', `String'} -> `File' #}
 
--- | Recursively dump ``node`` to file in BTOR_ format.
+-- | Recursively dump @node@ to file in BTOR_ format.
 {#fun dump_btor_node as ^ { `Btor' , `File', `Node' } -> `()' #}
 
 -- | Dump formula to file in BTOR_ format.
 {#fun dump_btor as ^ { `Btor' , `File' } -> `()' #}
 
--- | Recursively dump ``node`` to file in `SMT-LIB v2`_ format.
+-- | Recursively dump @node@ to file in SMT-LIB v2 format.
 {#fun dump_smt2_node as ^ { `Btor' , `File', `Node' } -> `()' #}
 
--- | Dumps formula to file in `SMT-LIB v2`_ format.
+-- | Dumps formula to file in SMT-LIB v2 format.
 {#fun dump_smt2 as ^ { `Btor' , `File' } -> `()' #}
