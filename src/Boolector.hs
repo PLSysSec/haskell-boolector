@@ -59,6 +59,8 @@ main = do
     assert (mb == 22) $ return ()
 @
 
+The API is inspired by the Z3 Haskell API <http://hackage.haskell.org/package/z3>.
+
 -}
 
 {-# language CPP #-}
