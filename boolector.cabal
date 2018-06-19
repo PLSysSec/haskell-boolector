@@ -25,7 +25,7 @@ library
       Boolector
       Boolector.Foreign
   build-depends:
-        base, 
+        base >= 4.7 && < 5,
         containers,
         mtl
 
@@ -36,6 +36,7 @@ library
   includes:         boolector.h
 
 Test-Suite API_Usage_Example
+  default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5
                , boolector
   Type: exitcode-stdio-1.0
@@ -44,6 +45,7 @@ Test-Suite API_Usage_Example
   hs-source-dirs: test
 
 Test-Suite Array_Example
+  default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5
                , boolector
   Type: exitcode-stdio-1.0
@@ -52,6 +54,7 @@ Test-Suite Array_Example
   hs-source-dirs: test
 
 Test-Suite UF_Example
+  default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5
                , boolector
   Type: exitcode-stdio-1.0
@@ -60,6 +63,7 @@ Test-Suite UF_Example
   hs-source-dirs: test
 
 Test-Suite Arith_Example
+  default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5
                , boolector
   Type: exitcode-stdio-1.0
