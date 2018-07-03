@@ -151,7 +151,7 @@ module Boolector.Foreign (
   , dumpSmt2Node
   , dumpBtor
   , dumpSmt2
-  -- * libc re-xpose
+  -- * Helpers
   , fopen
   , setTerm
   ) where
@@ -564,6 +564,7 @@ foreign import ccall "boolector_set_term"
 -- Given bit vector node @n1@, the value it represents is the number of bits
 -- by which node @n0@ is rotated to the left.
 {#fun rol as ^ { `Btor' , `Node', `Node'} -> `Node' #}
+
 -- | Create a rotate right.
 --
 -- Given bit vector node @n1@, the value it represents is the number of bits by
@@ -898,9 +899,10 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 -- Dumping
 --
 
+-- | POSIX files
 {#pointer *FILE as File foreign finalizer fclose newtype#}
 
--- | libc's fopen
+-- | Expose POSIX file open.
 {#fun fopen as ^ {`String', `String'} -> `File' #}
 
 -- | Recursively dump @node@ to file in BTOR_ format.
