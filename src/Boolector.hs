@@ -139,6 +139,7 @@ module Boolector ( -- * Boolector monadic computations
                  , uext
                  , sext
                  , concat
+                 , repeat
                  -- *** Bit-wise operations
                  , xor
                  , xnor
@@ -238,7 +239,7 @@ import Control.Monad.State.Strict
 import Control.Exception hiding (assert)
 import Control.Concurrent
 
-import Prelude hiding (read, not, and, or, const, concat)
+import Prelude hiding (read, not, and, or, const, concat, repeat)
 import qualified Prelude as Prelude
 
 --
@@ -466,6 +467,10 @@ sext n w = liftBoolector2 B.sext n (fromIntegral w)
 -- | Create the concatenation of two bit vectors.
 concat :: MonadBoolector m => Node -> Node -> m Node
 concat = liftBoolector2 B.concat
+
+-- | Create @n@ concatenations of a given node @node@.
+repeat :: MonadBoolector m => Node -> Word32 -> m Node
+repeat n w = liftBoolector2 B.repeat n (fromIntegral w)
 
 -- | Create boolean implication.
 implies :: MonadBoolector m => Node -> Node -> m Node

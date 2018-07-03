@@ -6,9 +6,159 @@
 
 -}
 {-# LANGUAGE StandaloneDeriving #-}
-module Boolector.Foreign where
+module Boolector.Foreign (
+   -- ** Boolector state, options and configurations
+    Btor
+  , new
+  , Option(..)
+  , setOpt
+  , getOpt
+  , setSatSolver
+  -- * SAT/SMT queries
+  , Node
+  , sat
+  , limitedSat
+  , simplify
+  , Status(..)
+  -- ** Assert and assume
+  , assert
+  , assume
+  , failed
+  , fixateAssumptions
+  , resetAssumptions
+  , push
+  , pop
+  -- ** Variables and constants
+  , var
+  , const
+  , constd
+  , consth
+  -- *** Booleans
+  , true
+  , false
+  -- *** Bit-vectors
+  , zero
+  , one
+  , ones
+  , unsignedInt
+  , int
+  -- *** Arrays
+  , array
+  -- *** Functions
+  , fun
+  , uf
+  -- **** Parameters
+  , param
+  -- *** Quantified terms
+  , forall
+  , exists
+  -- ** Operations
+  -- *** Implications and conditionals
+  , implies
+  , iff
+  , cond
+  -- *** Equality checking
+  , eq
+  , ne
+  -- *** Bit flipping, extraction, extension, and reduction
+  , not
+  , neg
+  , redor
+  , redxor
+  , redand
+  , slice
+  , uext
+  , sext
+  , concat
+  , repeat
+  -- *** Bit-wise operations
+  , xor
+  , xnor
+  , and
+  , nand
+  , or
+  , nor
+  , sll
+  , srl
+  , sra
+  , rol
+  , ror
+  -- *** Arithmetic operations
+  , add
+  , uaddo
+  , saddo
+  , inc
+  , sub
+  , usubo
+  , ssubo
+  , dec
+  , mul
+  , umulo
+  , smulo
+  , udiv
+  , sdiv
+  , sdivo
+  , urem
+  , srem
+  , smod
+  -- *** Comparison operations
+  , ult
+  , slt
+  , ulte
+  , slte
+  , ugt
+  , sgt
+  , ugte
+  , sgte
+  -- *** Array operations
+  , read
+  , write
+  -- *** Function operations
+  , apply
+  -- ** Accessors
+  , getSort
+  , funGetDomainSort
+  , funGetCodomainSort
+  , getFunArity
+  , getSymbol
+  , setSymbol
+  , getWidth
+  , getIndexWidth
+  , isConst
+  , isVar
+  , isArray
+  , isArrayVar
+  , isParam
+  , isBoundParam
+  , isUf
+  , isFun
+  -- ** Models
+  , bvAssignment
+  -- ** Sorts
+  , Sort
+  , boolSort
+  , bitvecSort
+  , funSort
+  , arraySort
+  -- *** Accessors
+  , isEqualSort
+  , isArraySort
+  , isBitvecSort
+  , isFunSort
+  , funSortCheck
+  -- * Debug dumping
+  , dumpBtorNode
+  , dumpSmt2Node
+  , dumpBtor
+  , dumpSmt2
+  -- * libc re-xpose
+  , fopen
+  , setTerm
+  ) where
 
-import Foreign
+import Prelude hiding (read, not, and, or, const, concat, repeat)
+
+import Foreign hiding (xor, new)
 import Foreign.C
 
 import Control.Monad
@@ -198,9 +348,6 @@ foreign import ccall "boolector_set_term"
 -- | Get the current value of an option.
 {#fun get_opt as ^ { `Btor', `Option' } -> `CUInt' #}
 
--- | Check if Boolector has a given option.
-{#fun has_opt as ^ { `Btor', `Option' } -> `Bool' #}
-
 --
 -- Solving
 --
@@ -249,9 +396,6 @@ foreign import ccall "boolector_set_term"
 --
 -- Expressions
 --
-
--- | Copy expression (increments reference counter).
-{#fun copy as ^ { `Btor' , `Node' } -> `Node' #}
 
 -- | Create bit vector constant representing the bit vector @bits@.
 {#fun const as ^ { `Btor' , `String' } -> `Node' #}
@@ -701,12 +845,12 @@ foreign import ccall "boolector_fun_sort_check"
 -- The expression can be an arbitrary bit vector expression which
 -- occurs in an assertion or current assumption. The assignment string has to
 -- be freed by 'free_bv_assignment'.
+--
+-- TODO: we should change this function to return a ModelString and use
+-- free_bv_assignment to actually free the assignments. We're very leaky right
+--now.
 {#fun bv_assignment as ^ { `Btor' , `Node' } -> `String' #}
 
--- | Free an assignment string for bit vectors.  TODO: we should change
--- bv_assignment to return a ModelString and  use free to actually free the
--- assignments. We're very leaky right now.
-{#fun free_bv_assignment as ^ { `Btor' , `String' } -> `()' #}
 
 --
 -- Sorts.
