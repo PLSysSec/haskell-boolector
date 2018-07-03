@@ -625,7 +625,17 @@ withNodes (hx:hxs) f = withNode hx $ \cx -> withNodes hxs $ \cxs -> f (cx:cxs)
 {#fun get_fun_arity as ^ { `Btor' , `Node' } -> `CUInt' #}
 
 -- | Get the symbol of an expression.
-{#fun get_symbol as ^ { `Btor' , `Node' } -> `String' #}
+foreign import ccall safe "Boolector/Foreign.chs.h boolector_get_symbol"
+  getSymbol'_ :: Ptr Btor -> Ptr Node -> IO CString
+
+-- | Get the symbol of an expression.
+getSymbol :: Btor -> Node -> IO (Maybe String)
+getSymbol hbtor hnode = withBtor hbtor $ \cbtor -> 
+  withNode hnode $ \cnode -> do
+    cstrPtr <- getSymbol'_ cbtor cnode
+    if cstrPtr == nullPtr 
+      then return Nothing
+      else Just `liftM` peekCString cstrPtr
 
 -- | Set the symbol of an expression.
 {#fun set_symbol as ^ { `Btor' , `Node', `String' } -> `()' #}

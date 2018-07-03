@@ -189,6 +189,7 @@ module Boolector ( -- * Boolector monadic computations
                  , funGetCodomainSort
                  , funGetArity
                  , getSymbol
+                 , setSymbol
                  , getWidth
                  , getIndexWidth
                  , isConst
@@ -291,11 +292,11 @@ newBoolectorState (Just time) = do
   return btorState
 
 -- | Set option.
-setOpt :: MonadBoolector m => Option -> Word -> m ()
+setOpt :: MonadBoolector m => Option -> Word32 -> m ()
 setOpt o w = liftBoolector2 B.setOpt o (fromIntegral w)
 
 -- | Get option.
-getOpt :: MonadBoolector m => Option -> m Word
+getOpt :: MonadBoolector m => Option -> m Word32
 getOpt o = fromIntegral `liftM` liftBoolector1 B.getOpt o
 
 -- | Which sat solver to use.
@@ -333,11 +334,11 @@ sat :: MonadBoolector m => m Status
 sat = liftBoolector0 B.sat
 
 -- | Push new context levels.
-push :: MonadBoolector m => Word -> m ()
+push :: MonadBoolector m => Word32 -> m ()
 push w = liftBoolector1 B.push (fromIntegral w)
 
 -- | Pop context levels.
-pop :: MonadBoolector m => Word -> m ()
+pop :: MonadBoolector m => Word32 -> m ()
 pop w = liftBoolector1 B.pop (fromIntegral w)
 
 -- | Solve an input formula and limit the search by the number of lemmas
@@ -444,22 +445,22 @@ redand = liftBoolector1 B.redand
 -- | Create a bit vector slice of @node@ from index @upper@ to index @lower@.
 slice :: MonadBoolector m
       => Node -- ^ Bit vector node.
-      -> Word -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of @node@.
-      -> Word -- ^ Lower index which must be greater than or equal to zero, and less than or equal to @upper@.
+      -> Word32 -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of @node@.
+      -> Word32 -- ^ Lower index which must be greater than or equal to zero, and less than or equal to @upper@.
       -> m Node
 slice n u l = (liftBoolector3 B.slice) n (fromIntegral u) (fromIntegral l)
 
 -- | Create unsigned extension.
 --
 -- The bit vector @node@ is padded with @width@ * zeroes.
-uext :: MonadBoolector m => Node -> Word -> m Node
+uext :: MonadBoolector m => Node -> Word32 -> m Node
 uext n w = (liftBoolector2 B.uext) n $ fromIntegral w
 
 -- | Create signed extension.
 --
 -- The bit vector @node@ is padded with @width@ bits where the value
 -- depends on the value of the most significant bit of node @n@.
-sext :: MonadBoolector m => Node -> Word -> m Node
+sext :: MonadBoolector m => Node -> Word32 -> m Node
 sext n w = liftBoolector2 B.sext n (fromIntegral w)
 
 -- | Create the concatenation of two bit vectors.
@@ -800,8 +801,12 @@ funGetArity :: MonadBoolector m => Node -> m Word
 funGetArity n = fromIntegral `liftM` liftBoolector1 B.getFunArity n
 
 -- | Get the symbol of an expression.
-getSymbol :: MonadBoolector m => Node -> m String
+getSymbol :: MonadBoolector m => Node -> m (Maybe String)
 getSymbol = liftBoolector1 B.getSymbol
+
+-- | Set the symbol of an expression.
+setSymbol :: MonadBoolector m => Node -> String -> m ()
+setSymbol = liftBoolector2 B.setSymbol
 
 -- | Get the bit width of an expression.
 --

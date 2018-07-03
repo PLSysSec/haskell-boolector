@@ -1,8 +1,12 @@
+
 import qualified Boolector as B
 
 import Control.Monad.IO.Class
 import Control.Exception (assert)
 import Control.Concurrent
+
+-- This example is same as the API_Usage_Example, but additionally tests
+-- symbols getters and setters
 
 main :: IO ()
 main = do
@@ -17,11 +21,19 @@ main = do
     x <- B.var u8 "x"
     y <- B.var u8 "y"
 
+    B.getSymbol x >>= \xname -> assert (xname == Just "x") $ return ()
+    B.getSymbol y >>= \yname -> assert (yname == Just "y") $ return ()
+
     -- Perform some operations on the values
     p  <- B.mul x y
     o  <- B.umulo x y
     no <- B.not o
     e  <- B.eq c p
+
+    B.getSymbol p >>= \pname -> assert (pname == Nothing) $ return ()
+    B.setSymbol p "p"
+    B.getSymbol p >>= \pname -> assert (pname == Just "p") $ return ()
+
 
     -- Make some assertions
     B.assert =<< B.and no e
@@ -38,5 +50,7 @@ main = do
     -- Get model
     mx <- B.unsignedBvAssignment x
     my <- B.unsignedBvAssignment y
+    mp <- B.unsignedBvAssignment p
     assert (mx == 7) $ return ()
     assert (my == 5) $ return ()
+    assert (mp == 35) $ return ()
