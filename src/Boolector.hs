@@ -154,22 +154,23 @@ module Boolector ( -- * Boolector monadic computations
                  , ror
                  -- *** Arithmetic operations
                  , add
-                 , uaddo
-                 , saddo
                  , inc
                  , sub
-                 , usubo
-                 , ssubo
                  , dec
                  , mul
-                 , umulo
-                 , smulo
                  , udiv
                  , sdiv
-                 , sdivo
                  , urem
                  , srem
                  , smod
+                 -- **** Overflow detection
+                 , uaddo
+                 , saddo
+                 , usubo
+                 , ssubo
+                 , umulo
+                 , smulo
+                 , sdivo
                  -- *** Comparison operations
                  , ult
                  , slt
@@ -593,14 +594,6 @@ ror = liftBoolector2 B.ror
 add :: MonadBoolector m => Node -> Node -> m Node
 add = liftBoolector2 B.add
 
--- | Create an unsigned bit vector addition overflow detection.
-uaddo :: MonadBoolector m => Node -> Node -> m Node
-uaddo = liftBoolector2 B.uaddo
-
--- | Create a signed bit vector addition overflow detection.
-saddo :: MonadBoolector m => Node -> Node -> m Node
-saddo = liftBoolector2 B.saddo
-
 -- | Create bit vector expression that increments bit vector @node@ by one.
 inc :: Node ->  Boolector Node
 inc = liftBoolector1 B.inc
@@ -608,14 +601,6 @@ inc = liftBoolector1 B.inc
 -- | Create a bit vector subtraction.
 sub :: MonadBoolector m => Node -> Node -> m Node
 sub = liftBoolector2 B.sub
-
--- | Create an unsigned bit vector subtraction overflow detection.
-usubo :: MonadBoolector m => Node -> Node -> m Node
-usubo = liftBoolector2 B.usubo
-
--- | Create a signed bit vector subtraction overflow detection.
-ssubo :: MonadBoolector m => Node -> Node -> m Node
-ssubo = liftBoolector2 B.ssubo
 
 -- | Create bit vector expression that decrements bit vector @node@ by one.
 dec :: MonadBoolector m => Node -> m Node
@@ -625,14 +610,6 @@ dec = liftBoolector1 B.dec
 mul :: MonadBoolector m => Node -> Node -> m Node
 mul = liftBoolector2 B.mul
 
--- | Create an unsigned bit vector multiplication overflow detection.
-umulo :: MonadBoolector m => Node -> Node -> m Node
-umulo = liftBoolector2 B.umulo
-
--- | Create signed multiplication overflow detection.
-smulo :: MonadBoolector m => Node -> Node -> m Node
-smulo = liftBoolector2 B.smulo
-
 -- | Create unsigned division.
 udiv :: MonadBoolector m => Node -> Node -> m Node
 udiv = liftBoolector2 B.udiv
@@ -640,10 +617,6 @@ udiv = liftBoolector2 B.udiv
 -- | Create signed division.
 sdiv :: MonadBoolector m => Node -> Node -> m Node
 sdiv = liftBoolector2 B.sdiv
-
--- | Create a signed bit vector division overflow detection.
-sdivo :: MonadBoolector m => Node -> Node -> m Node
-sdivo = liftBoolector2 B.sdivo
 
 -- | Create an unsigned remainder.
 urem :: MonadBoolector m => Node -> Node -> m Node
@@ -656,6 +629,52 @@ srem = liftBoolector2 B.srem
 -- | Create a, signed remainder where its sign matches the sign of the divisor.
 smod :: MonadBoolector m => Node -> Node -> m Node
 smod = liftBoolector2 B.smod
+
+--
+-- Overflow detection
+--
+
+-- | Create an unsigned bit vector subtraction overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+usubo :: MonadBoolector m => Node -> Node -> m Node
+usubo = liftBoolector2 B.usubo
+
+-- | Create a signed bit vector subtraction overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+ssubo :: MonadBoolector m => Node -> Node -> m Node
+ssubo = liftBoolector2 B.ssubo
+
+-- | Create an unsigned bit vector addition overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+uaddo :: MonadBoolector m => Node -> Node -> m Node
+uaddo = liftBoolector2 B.uaddo
+
+-- | Create a signed bit vector addition overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+saddo :: MonadBoolector m => Node -> Node -> m Node
+saddo = liftBoolector2 B.saddo
+
+-- | Create an unsigned bit vector multiplication overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+umulo :: MonadBoolector m => Node -> Node -> m Node
+umulo = liftBoolector2 B.umulo
+
+-- | Create signed multiplication overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+smulo :: MonadBoolector m => Node -> Node -> m Node
+smulo = liftBoolector2 B.smulo
+
+-- | Create a signed bit vector division overflow detection.
+-- Returns bit vector with bit-width one, which indicates if the operation
+-- overflows.
+sdivo :: MonadBoolector m => Node -> Node -> m Node
+sdivo = liftBoolector2 B.sdivo
 
 --
 -- Comparison operations.
@@ -768,17 +787,17 @@ apply = liftBoolector2 B.apply
 -- Quantified terms
 --
 
--- | Create a universally quantified term.
+-- | Create a universally quantified term. 
 forall :: MonadBoolector m
-       => [Node] -- ^ Quantified variables
-       -> Node   -- ^ Term where variables may occur
+       => [Node] -- ^ Quantified variables (create with 'param')
+       -> Node   -- ^ Term where variables may occur. (Cannot contain functions.)
        -> m Node
 forall = liftBoolector2 B.forall
 
 -- | Create an existentially quantifed term.
 exists :: MonadBoolector m
-       => [Node] -- ^ Quantified variables
-       -> Node   -- ^ Term where variables may occur
+       => [Node] -- ^ Quantified variables (create with 'param')
+       -> Node   -- ^ Term where variables may occur. (Cannot contain functions.)
        -> m Node
 exists = liftBoolector2 B.exists
 

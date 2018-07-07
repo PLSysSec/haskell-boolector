@@ -1,5 +1,5 @@
 name:                boolector
-version:             0.0.0.3
+version:             0.0.0.4
 synopsis:            Haskell bindings for the Boolector SMT solver
 description:
 
@@ -85,5 +85,14 @@ Test-Suite GetSetSymbol_Example
                , boolector
   Type: exitcode-stdio-1.0
   main-is: GetSetSymbol_Example.hs
+  extra-libraries:  boolector
+  hs-source-dirs: test
+
+Test-Suite UF_Example2
+  default-language: Haskell2010
+  Build-Depends: base >= 4.7 && < 5
+               , boolector
+  Type: exitcode-stdio-1.0
+  main-is: UF_Example2.hs
   extra-libraries:  boolector
   hs-source-dirs: test
