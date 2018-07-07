@@ -219,10 +219,9 @@ module Boolector ( -- * Boolector monadic computations
                  , isFunSort
                  , funSortCheck
                  -- * Debug dumping
-                 , dumpBtorNode
-                 , dumpSmt2Node
-                 , dumpBtor
-                 , dumpSmt2
+                 , dump
+                 , dumpNode
+                 , DumpFormat(..)
                  ) where
 
 import Boolector.Foreign (Option(..), Status(..), Node, Sort)
@@ -975,30 +974,29 @@ funSortCheck = liftBoolector2 B.funSortCheck
 -- Dumping
 --
 
+-- | Output dump format.
+data DumpFormat = DumpBtor | DumpSMT2
+      deriving (Eq, Show)
 
--- | Recursively dump @node@ to file in BTOR_ format.
-dumpBtorNode :: MonadBoolector m => FilePath -> Node -> m ()
-dumpBtorNode path node = do
-  btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withDumpFile path $ \file -> B.dumpBtorNode btor file node
 
--- | Recursively dump @node@ to file in SMT-LIB v2 format.
-dumpSmt2Node :: MonadBoolector m => FilePath -> Node -> m ()
-dumpSmt2Node path node = do
+-- | Recursively dump @node@ to file in BTOR or SMT-LIB v2 format.
+dumpNode :: MonadBoolector m => DumpFormat -> FilePath -> Node -> m ()
+dumpNode fmt path node = do
   btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withDumpFile path $ \file -> B.dumpSmt2Node btor file node
+  liftIO $ B.withDumpFile path $ \file -> dumper btor file node
+  where dumper = case fmt of
+                  DumpBtor -> B.dumpBtorNode
+                  _        -> B.dumpSmt2Node
 
--- | Dump formula to file in BTOR_ format.
-dumpBtor :: MonadBoolector m => FilePath -> m ()
-dumpBtor path = do
-  btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withDumpFile path (B.dumpBtor btor)
 
--- | Dumps formula to file in SMT-LIB v2 format.
-dumpSmt2 :: MonadBoolector m => FilePath -> m ()
-dumpSmt2 path = do
+-- | Dump formula to file in BTOR or SMT-LIB v2 format.
+dump :: MonadBoolector m => DumpFormat -> FilePath -> m ()
+dump fmt path = do
   btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withDumpFile path (B.dumpSmt2 btor)
+  liftIO $ B.withDumpFile path (dumper btor)
+  where dumper = case fmt of
+                  DumpBtor -> B.dumpBtor
+                  _        -> B.dumpSmt2
 
 --
 -- Helpers

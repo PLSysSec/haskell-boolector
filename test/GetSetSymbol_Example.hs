@@ -42,7 +42,7 @@ main = do
     B.assert =<< B.ugt y one
 
     -- Dump the corresponding SMT Lib 2 to a file
-    B.dumpSmt2 "dump_example.smt2"
+    B.dump B.DumpSMT2 "dump_example.smt2"
 
     -- Check satisfiability
     B.Sat <- B.sat

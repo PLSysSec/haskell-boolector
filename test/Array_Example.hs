@@ -24,7 +24,7 @@ main = do
     y' <- B.read arr x
     w <- B.var u8 "w"
 
-    B.dumpSmt2 "dump_example.smt2"
+    B.dump B.DumpSMT2 "dump_example.smt2"
     B.sat
     mx  <- B.unsignedBvAssignment x
     my <- B.unsignedBvAssignment y
