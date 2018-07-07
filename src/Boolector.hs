@@ -975,29 +975,30 @@ funSortCheck = liftBoolector2 B.funSortCheck
 -- Dumping
 --
 
+
 -- | Recursively dump @node@ to file in BTOR_ format.
 dumpBtorNode :: MonadBoolector m => FilePath -> Node -> m ()
 dumpBtorNode path node = do
-  file <- liftIO $ B.fopen path "w"
-  liftBoolector2 B.dumpBtorNode file node
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withDumpFile path $ \file -> B.dumpBtorNode btor file node
 
 -- | Recursively dump @node@ to file in SMT-LIB v2 format.
 dumpSmt2Node :: MonadBoolector m => FilePath -> Node -> m ()
 dumpSmt2Node path node = do
-  file <- liftIO $ B.fopen path "w"
-  liftBoolector2 B.dumpSmt2Node file node
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withDumpFile path $ \file -> B.dumpSmt2Node btor file node
 
 -- | Dump formula to file in BTOR_ format.
 dumpBtor :: MonadBoolector m => FilePath -> m ()
 dumpBtor path = do
-  file <- liftIO $ B.fopen path "w"
-  liftBoolector1 B.dumpBtor file
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withDumpFile path (B.dumpBtor btor)
 
 -- | Dumps formula to file in SMT-LIB v2 format.
 dumpSmt2 :: MonadBoolector m => FilePath -> m ()
 dumpSmt2 path = do
-  file <- liftIO $ B.fopen path "w"
-  liftBoolector1 B.dumpSmt2 file
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withDumpFile path (B.dumpSmt2 btor)
 
 --
 -- Helpers

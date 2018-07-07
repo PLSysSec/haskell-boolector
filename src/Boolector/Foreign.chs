@@ -152,7 +152,7 @@ module Boolector.Foreign (
   , dumpBtor
   , dumpSmt2
   -- * Helpers
-  , fopen
+  , withDumpFile 
   , setTerm
   ) where
 
@@ -162,6 +162,7 @@ import Foreign hiding (xor, new)
 import Foreign.C
 
 import Control.Monad
+import Control.Exception (bracket)
 
 {#context lib = "boolector" prefix = "boolector_" #}
 
@@ -900,10 +901,24 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 --
 
 -- | POSIX files
-{#pointer *FILE as File foreign finalizer fclose newtype#}
+{#pointer *FILE as File foreign newtype#}
 
--- | Expose POSIX file open.
+-- | Expose POSIX fopen.
 {#fun fopen as ^ {`String', `String'} -> `File' #}
+
+-- | Expose POSIX fclose.
+{#fun fclose as ^ {`File'} -> `()' #}
+
+-- | Expose POSIX fflush.
+{#fun fflush as ^ {`File'} -> `()' #}
+
+-- | Helper for writing to dump file.
+withDumpFile :: String
+             -> (File -> IO ())
+             -> IO ()
+withDumpFile path act = bracket
+  (fopen path "w") fclose
+  (\fileHandle -> act fileHandle >> fflush fileHandle)
 
 -- | Recursively dump @node@ to file in BTOR_ format.
 {#fun dump_btor_node as ^ { `Btor' , `File', `Node' } -> `()' #}
