@@ -41,8 +41,8 @@ main = do
     B.assert =<< B.ugt x one
     B.assert =<< B.ugt y one
 
-    -- Dump the corresponding SMT Lib 2 to a file
-    B.dump B.DumpSMT2 "dump_example.smt2"
+    -- Dump the corresponding SMT Lib 2
+    B.dumpToString B.DumpSMT2 >>= liftIO . putStrLn
 
     -- Check satisfiability
     B.Sat <- B.sat

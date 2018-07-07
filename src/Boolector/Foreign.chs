@@ -152,7 +152,7 @@ module Boolector.Foreign (
   , dumpBtor
   , dumpSmt2
   -- * Helpers
-  , withDumpFile 
+  , withDumpFile, withTempDumpFile 
   , setTerm
   ) where
 
@@ -162,7 +162,9 @@ import Foreign hiding (xor, new)
 import Foreign.C
 
 import Control.Monad
-import Control.Exception (bracket)
+import Control.Exception (bracket, finally, onException)
+import System.IO.Temp
+import System.Directory (removeFile)
 
 {#context lib = "boolector" prefix = "boolector_" #}
 
@@ -903,13 +905,13 @@ withSorts (hx:hxs) f = withSort hx $ \cx -> withSorts hxs $ \cxs -> f (cx:cxs)
 -- | POSIX files
 {#pointer *FILE as File foreign newtype#}
 
--- | Expose POSIX fopen.
+-- | POSIX fopen.
 {#fun fopen as ^ {`String', `String'} -> `File' #}
 
--- | Expose POSIX fclose.
+-- | POSIX fclose.
 {#fun fclose as ^ {`File'} -> `()' #}
 
--- | Expose POSIX fflush.
+-- | POSIX fflush.
 {#fun fflush as ^ {`File'} -> `()' #}
 
 -- | Helper for writing to dump file.
@@ -919,6 +921,13 @@ withDumpFile :: String
 withDumpFile path act = bracket
   (fopen path "w") fclose
   (\fileHandle -> act fileHandle >> fflush fileHandle)
+
+-- | Helper for writing to dump file.
+withTempDumpFile :: (File -> IO ()) -> IO String
+withTempDumpFile act = do
+  path <- emptySystemTempFile "haskell-boolector"
+  withDumpFile path act `onException` removeFile path
+  readFile path `finally` removeFile path
 
 -- | Recursively dump @node@ to file in BTOR_ format.
 {#fun dump_btor_node as ^ { `Btor' , `File', `Node' } -> `()' #}

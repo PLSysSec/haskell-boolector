@@ -32,6 +32,8 @@ main = do
     -- (assert (>= (* 2 x) (+ y z)))
     do tmp1 <- B.mul two x
        tmp2 <- B.add y z
+       tmp2Str <- B.dumpNodeToString B.DumpSMT2 tmp2
+       liftIO $ putStrLn $ "tmp2Str = " ++ tmp2Str
        B.assert =<< B.sgte tmp1 tmp2
 
     -- (assert (< (f x) (g x x)))

@@ -221,6 +221,8 @@ module Boolector ( -- * Boolector monadic computations
                  -- * Debug dumping
                  , dump
                  , dumpNode
+                 , dumpToString
+                 , dumpNodeToString
                  , DumpFormat(..)
                  ) where
 
@@ -978,7 +980,6 @@ funSortCheck = liftBoolector2 B.funSortCheck
 data DumpFormat = DumpBtor | DumpSMT2
       deriving (Eq, Show)
 
-
 -- | Recursively dump @node@ to file in BTOR or SMT-LIB v2 format.
 dumpNode :: MonadBoolector m => DumpFormat -> FilePath -> Node -> m ()
 dumpNode fmt path node = do
@@ -988,12 +989,31 @@ dumpNode fmt path node = do
                   DumpBtor -> B.dumpBtorNode
                   _        -> B.dumpSmt2Node
 
-
 -- | Dump formula to file in BTOR or SMT-LIB v2 format.
 dump :: MonadBoolector m => DumpFormat -> FilePath -> m ()
 dump fmt path = do
   btor <- unBoolectorState `liftM` getBoolectorState
   liftIO $ B.withDumpFile path (dumper btor)
+  where dumper = case fmt of
+                  DumpBtor -> B.dumpBtor
+                  _        -> B.dumpSmt2
+
+-- | Same as 'dumpNode', but returns string.
+-- TODO: this is super slow, we should request feature from boolector.
+dumpNodeToString :: MonadBoolector m => DumpFormat -> Node -> m String
+dumpNodeToString fmt node = do
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withTempDumpFile (\file -> dumper btor file node)
+  where dumper = case fmt of
+                  DumpBtor -> B.dumpBtorNode
+                  _        -> B.dumpSmt2Node
+
+-- | Same as 'dump', but returns string.
+-- TODO: this is super slow, we should request feature from boolector.
+dumpToString :: MonadBoolector m => DumpFormat -> m String
+dumpToString fmt = do
+  btor <- unBoolectorState `liftM` getBoolectorState
+  liftIO $ B.withTempDumpFile (dumper btor)
   where dumper = case fmt of
                   DumpBtor -> B.dumpBtor
                   _        -> B.dumpSmt2
