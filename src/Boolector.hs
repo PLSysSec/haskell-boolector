@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 {-|
 
 This module exposes a DSL for writing symbolic computations atop the Boolector
@@ -209,6 +210,7 @@ module Boolector ( -- * Boolector monadic computations
                  , boolAssignment
                  -- ** Sorts
                  , Sort
+                 , SortTy, sortTy
                  , boolSort
                  , bitvecSort
                  , funSort
@@ -227,16 +229,18 @@ module Boolector ( -- * Boolector monadic computations
                  , DumpFormat(..)
                  ) where
 
-import Boolector.Foreign (Option(..), Status(..), Node, Sort)
+import Boolector.Foreign (Option(..), Status(..))
 import qualified Boolector.Foreign as B
 
 import Data.Char (isDigit)
+import Data.Maybe (listToMaybe)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Word
 
+import Control.Applicative ((<$>))
 import Control.Monad.State.Strict
 import Control.Exception hiding (assert)
 import Control.Concurrent
@@ -314,15 +318,15 @@ setSatSolver solver = liftBoolector1 B.setSatSolver (show solver)
 
 -- | Add a constraint.
 assert :: MonadBoolector m => Node -> m ()
-assert = liftBoolector1 B.assert
+assert = liftBoolector1 B.assert . _node
 
 -- | Add an assumption.
 assume :: MonadBoolector m => Node -> m ()
-assume = liftBoolector1 B.assume
+assume = liftBoolector1 B.assume . _node
 
 -- | Determine if assumption node is a failed assumption.
 failed :: MonadBoolector m => Node -> m Bool
-failed = liftBoolector1 B.failed
+failed = liftBoolector1 B.failed . _node
 
 -- | Add all assumptions as assertions.
 fixateAssumptions :: MonadBoolector m => m ()
@@ -361,6 +365,13 @@ simplify = liftBoolector0 B.sat
 -- Expressions
 --
 
+-- | Node data type wrapping the underlying Boolector node with a show string.
+data Node = Node { _node     :: B.Node
+                 , _showNode :: String } deriving (Eq, Ord)
+
+instance Show Node where
+  show = _showNode
+
 -- | Like true and false
 bool :: MonadBoolector m => Bool -> m Node
 bool True  = true
@@ -369,35 +380,40 @@ bool False = false
 -- | Create constant true. This is represented by the bit vector constant one
 -- with bit width one.
 true :: MonadBoolector m => m Node
-true = liftBoolector0 B.true
+true = mkNode "true" $ liftBoolector0 B.true
 
 -- | Create bit vector constant zero with bit width one.
 false :: MonadBoolector m => m Node
-false = liftBoolector0 B.false
+false = mkNode "false" $ liftBoolector0 B.false
 
 -- | Create bit vector constant representing the bit vector @bits@.
 const :: MonadBoolector m => String -> m Node
-const = liftBoolector1 B.const
+const str = mkNode ("0b" ++ str) $ liftBoolector1 B.const str
 
 -- | Create bit vector constant representing the decimal number @str@.
 constd :: MonadBoolector m => Sort -> String -> m Node
-constd = liftBoolector2 B.constd
+constd srt str = mkNode str $ liftBoolector2 B.constd (_sort srt) str
 
 -- | Create bit vector constant representing the hexadecimal number @str@.
 consth :: MonadBoolector m => Sort -> String -> m Node
-consth = liftBoolector2 B.consth
+consth srt str = mkNode ("0x" ++ str) $ liftBoolector2 B.consth (_sort srt) str
 
 -- | Create bit vector constant zero of sort @sort@.
 zero :: MonadBoolector m => Sort -> m Node
-zero = liftBoolector1 B.zero
+zero = mkNode "zero" . liftBoolector1 B.zero . _sort
 
 -- | Create bit vector constant of sort @sort@, where each bit is set to one.
 ones :: MonadBoolector m => Sort -> m Node
-ones = liftBoolector1 B.ones
+ones srt = mkNode onesStr $ liftBoolector1 B.one $ _sort srt
+  where onesStr = "0b" ++ replicate nr '1'
+        nr = case sortTy srt of
+              BoolSort -> 1
+              BitVecSort wNr -> fromIntegral wNr
+              _ -> error "invalid sort"
 
 -- | Create bit vector constant one of sort @sort@.
 one :: MonadBoolector m => Sort -> m Node
-one = liftBoolector1 B.one
+one = mkNode "1" . liftBoolector1 B.one . _sort
 
 -- |  Create bit vector constant representing the unsigned integer @u@ of
 -- sort @sort@.
@@ -405,7 +421,7 @@ one = liftBoolector1 B.one
 -- The constant is obtained by either truncating bits or by unsigned extension
 -- (padding with zeroes).
 unsignedInt :: MonadBoolector m => Integer -> Sort -> m Node
-unsignedInt i sort = liftBoolector2 B.unsignedInt (fromIntegral i) sort
+unsignedInt i srt = mkNode (show i) $ liftBoolector2 B.unsignedInt (fromIntegral i) (_sort srt)
 
 -- | Create bit vector constant representing the signed integer @i@ of sort
 -- @sort@.
@@ -413,37 +429,37 @@ unsignedInt i sort = liftBoolector2 B.unsignedInt (fromIntegral i) sort
 -- The constant is obtained by either truncating bits or by
 -- signed extension (padding with ones).
 signedInt :: MonadBoolector m => Integer -> Sort -> m Node
-signedInt i sort = liftBoolector2 B.int (fromIntegral i) sort
+signedInt i srt = mkNode (show i) $ liftBoolector2 B.int (fromIntegral i) (_sort srt)
 
 -- | Create a bit vector variable of sort @sort@.
 var :: MonadBoolector m => Sort -> String -> m Node
-var = createNamedNode B.var
+var srt str = mkNamedNode "var" B.var srt str
 
 -- | Create the one's complement of bit vector @node@.
 not :: MonadBoolector m => Node -> m Node
-not = liftBoolector1 B.not
+not n1 = mkNode ["not", show n1] $ liftBoolector1 B.not (_node n1)
 
 -- | Create the two's complement of bit vector @node@.
 neg :: MonadBoolector m => Node -> m Node
-neg = liftBoolector1 B.neg
+neg n1 = mkNode ["neg", show n1] $ liftBoolector1 B.neg (_node n1)
 
 -- | Create *or* reduction of node @node@.
 --
 -- All bits of node @node@ are combined by a Boolean *or*.
 redor :: MonadBoolector m => Node -> m Node
-redor = liftBoolector1 B.redor
+redor n1 = mkNode ["redor", show n1] $ liftBoolector1 B.redor (_node n1)
 
 -- | Create *xor* reduction of node @node@.
 --
 -- All bits of @node@ are combined by a Boolean *xor*.
 redxor :: MonadBoolector m => Node -> m Node
-redxor = liftBoolector1 B.redxor
+redxor n1 = mkNode ["redxor", show n1] $ liftBoolector1 B.redxor (_node n1)
 
 -- | Create *and* reduction of node @node@.
 --
 -- All bits of @node@ are combined by a Boolean *and*.
 redand :: MonadBoolector m => Node -> m Node
-redand = liftBoolector1 B.redand
+redand n = mkNode ["redand", show n] $ liftBoolector1 B.redand (_node n)
 
 -- | Create a bit vector slice of @node@ from index @upper@ to index @lower@.
 slice :: MonadBoolector m
@@ -451,50 +467,59 @@ slice :: MonadBoolector m
       -> Word32 -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of @node@.
       -> Word32 -- ^ Lower index which must be greater than or equal to zero, and less than or equal to @upper@.
       -> m Node
-slice n u l = (liftBoolector3 B.slice) n (fromIntegral u) (fromIntegral l)
+slice n u l = mkNode ["slice", show n, show u, show l] $
+              liftBoolector3 B.slice (_node n) (fromIntegral u) (fromIntegral l)
 
 -- | Create unsigned extension.
 --
 -- The bit vector @node@ is padded with @width@ * zeroes.
 uext :: MonadBoolector m => Node -> Word32 -> m Node
-uext n w = (liftBoolector2 B.uext) n $ fromIntegral w
+uext n w = mkNode ["uext", show n, show w] $
+           liftBoolector2 B.uext (_node n) (fromIntegral w)
 
 -- | Create signed extension.
 --
 -- The bit vector @node@ is padded with @width@ bits where the value
 -- depends on the value of the most significant bit of node @n@.
 sext :: MonadBoolector m => Node -> Word32 -> m Node
-sext n w = liftBoolector2 B.sext n (fromIntegral w)
+sext n w = mkNode ["sext", show n, show w] $
+           liftBoolector2 B.sext (_node n) (fromIntegral w)
 
 -- | Create the concatenation of two bit vectors.
 concat :: MonadBoolector m => Node -> Node -> m Node
-concat = liftBoolector2 B.concat
+concat n1 n2 = mkNode ["concat", show n1, show n2] $
+               liftBoolector2 B.concat (_node n1) (_node n2)
 
 -- | Create @n@ concatenations of a given node @node@.
 repeat :: MonadBoolector m => Node -> Word32 -> m Node
-repeat n w = liftBoolector2 B.repeat n (fromIntegral w)
+repeat n w = mkNode ["repeat", show n, show w] $
+             liftBoolector2 B.repeat (_node n) (fromIntegral w)
 
 -- | Create boolean implication.
 implies :: MonadBoolector m => Node -> Node -> m Node
-implies = liftBoolector2 B.implies
+implies n1 n2 = mkNode ["implies", show n1, show n2] $
+                liftBoolector2 B.implies (_node n1) (_node n2)
 
 -- | Create Boolean equivalence.
 iff :: MonadBoolector m => Node -> Node -> m Node
-iff = liftBoolector2 B.iff
+iff n1 n2 = mkNode ["iff", show n1, show n2] $
+            liftBoolector2 B.iff (_node n1) (_node n2)
 
 -- | Create bit vector or array equality.
 --
 -- Both operands are either bit vectors with the same bit width or arrays
 -- of the same type.
 eq :: MonadBoolector m => Node -> Node -> m Node
-eq = liftBoolector2 B.eq
+eq n1 n2 = mkNode ["eq", show n1, show n2] $
+           liftBoolector2 B.eq (_node n1) (_node n2)
 
 -- | Create bit vector or array inequality.
 --
 -- Both operands are either bit vectors with the same bit width or arrays
 -- of the same type.
 ne :: MonadBoolector m => Node -> Node -> m Node
-ne = liftBoolector2 B.ne
+ne n1 n2 = mkNode ["ne", show n1, show n2] $
+           liftBoolector2 B.ne (_node n1) (_node n2)
 
 -- | Create an if-then-else.
 --
@@ -506,7 +531,8 @@ cond :: MonadBoolector m
      -> Node -- ^ Then node
      -> Node -- ^ Else node
      -> m Node
-cond = liftBoolector3 B.cond
+cond n1 n2 n3 = mkNode ["cond", show n1, show n2, show n3] $
+                liftBoolector3 B.cond (_node n1) (_node n2) (_node n3)
 
 --
 -- Bit-wise operations.
@@ -514,27 +540,27 @@ cond = liftBoolector3 B.cond
 
 -- | Create a bit vector *xor*.
 xor :: MonadBoolector m => Node -> Node -> m Node
-xor = liftBoolector2 B.xor
+xor n1 n2 = mkNode ["xor", show n1, show n2] $ liftBoolector2 B.xor (_node n1) (_node n2)
 
 -- | Create a bit vector *xnor*.
 xnor :: MonadBoolector m => Node -> Node -> m Node
-xnor = liftBoolector2 B.xnor
+xnor n1 n2 = mkNode ["xnor", show n1, show n2] $ liftBoolector2 B.xnor (_node n1) (_node n2)
 
 -- | Create a bit vector *and*.
 and  :: MonadBoolector m => Node -> Node -> m Node
-and  = liftBoolector2 B.and
+and n1 n2 = mkNode ["and", show n1, show n2] $ liftBoolector2 B.and (_node n1) (_node n2)
 
 -- | Create a bit vector *nand*.
 nand :: MonadBoolector m => Node -> Node -> m Node
-nand = liftBoolector2 B.nand
+nand n1 n2 = mkNode ["nand", show n1, show n2] $ liftBoolector2 B.nand (_node n1) (_node n2)
 
 -- | Create a bit vector *or*.
 or :: MonadBoolector m => Node -> Node -> m Node
-or = liftBoolector2 B.or
+or n1 n2 = mkNode ["or", show n1, show n2] $ liftBoolector2 B.or (_node n1) (_node n2)
 
 -- | Create a bit vector *nor*.
 nor :: MonadBoolector m => Node -> Node -> m Node
-nor = liftBoolector2 B.nor
+nor n1 n2 = mkNode ["nor", show n1, show n2] $ liftBoolector2 B.nor (_node n1) (_node n2)
 
 -- | Create a logical shift left.
 --
@@ -544,7 +570,7 @@ sll :: MonadBoolector m
     => Node -- ^ First bit vector operand where the bit width is a power of two and greater than 1.
     -> Node -- ^ Second bit vector operand with bit width log2 of the bit width of @n0@.
     -> m Node
-sll = liftBoolector2 B.sll
+sll n1 n2 = mkNode ["sll", show n1, show n2] $ liftBoolector2 B.sll (_node n1) (_node n2)
 
 -- | Create a logical shift right.
 --
@@ -554,7 +580,7 @@ srl :: MonadBoolector m
     => Node -- ^ First bit vector operand where the bit width is a power of two and greater than 1.
     -> Node -- ^ Second bit vector operand with bit width log2 of the bit width of @n0@.
     -> m Node
-srl = liftBoolector2 B.srl
+srl n1 n2 = mkNode ["srl", show n1, show n2] $ liftBoolector2 B.srl (_node n1) (_node n2)
 
 -- | Create an arithmetic shift right.
 --
@@ -564,7 +590,7 @@ sra :: MonadBoolector m
     => Node -- ^ First bit vector operand where the bit width is a power of two and greater than 1.
     -> Node -- ^ Second bit vector operand with bit width log2 of the bit width of @n0@.
     -> m Node
-sra = liftBoolector2 B.sra
+sra n1 n2 = mkNode ["sra", show n1, show n2] $ liftBoolector2 B.sra (_node n1) (_node n2)
 
 -- | Create a rotate left.
 --
@@ -574,7 +600,7 @@ rol :: MonadBoolector m
     => Node -- ^ First bit vector operand where the bit width is a power of two and greater than 1.
     -> Node -- ^ Second bit vector operand with bit width log2 of the bit width of @n0@.
     -> m Node
-rol = liftBoolector2 B.rol
+rol n1 n2 = mkNode ["rol", show n1, show n2] $ liftBoolector2 B.rol (_node n1) (_node n2)
 
 -- | Create a rotate right.
 --
@@ -584,7 +610,7 @@ ror :: MonadBoolector m
     => Node -- ^ First bit vector operand where the bit width is a power of two and greater than 1.
     -> Node -- ^ Second bit vector operand with bit width log2 of the bit width of @n0@.
     -> m Node
-ror = liftBoolector2 B.ror
+ror n1 n2 = mkNode ["ror", show n1, show n2] $ liftBoolector2 B.ror (_node n1) (_node n2)
 
 --
 -- Arithmetic operations.
@@ -592,43 +618,43 @@ ror = liftBoolector2 B.ror
 
 -- | Create bit vector addition.
 add :: MonadBoolector m => Node -> Node -> m Node
-add = liftBoolector2 B.add
+add n1 n2 = mkNode ["add", show n1, show n2] $ liftBoolector2 B.add (_node n1) (_node n2)
 
 -- | Create bit vector expression that increments bit vector @node@ by one.
 inc :: Node ->  Boolector Node
-inc = liftBoolector1 B.inc
+inc n = mkNode ["inc", show n] $ liftBoolector1 B.inc (_node n)
 
 -- | Create a bit vector subtraction.
 sub :: MonadBoolector m => Node -> Node -> m Node
-sub = liftBoolector2 B.sub
+sub n1 n2 = mkNode ["sub", show n1, show n2] $ liftBoolector2 B.sub (_node n1) (_node n2)
 
 -- | Create bit vector expression that decrements bit vector @node@ by one.
 dec :: MonadBoolector m => Node -> m Node
-dec = liftBoolector1 B.dec
+dec n = mkNode ["dec", show n] $ liftBoolector1 B.dec (_node n)
 
 -- | Create a bitvector multiplication.
 mul :: MonadBoolector m => Node -> Node -> m Node
-mul = liftBoolector2 B.mul
+mul n1 n2 = mkNode ["mul", show n1, show n2] $ liftBoolector2 B.mul (_node n1) (_node n2)
 
 -- | Create unsigned division.
 udiv :: MonadBoolector m => Node -> Node -> m Node
-udiv = liftBoolector2 B.udiv
+udiv n1 n2 = mkNode ["udiv", show n1, show n2] $ liftBoolector2 B.udiv (_node n1) (_node n2)
 
 -- | Create signed division.
 sdiv :: MonadBoolector m => Node -> Node -> m Node
-sdiv = liftBoolector2 B.sdiv
+sdiv n1 n2 = mkNode ["sdiv", show n1, show n2] $ liftBoolector2 B.sdiv (_node n1) (_node n2)
 
 -- | Create an unsigned remainder.
 urem :: MonadBoolector m => Node -> Node -> m Node
-urem = liftBoolector2 B.urem
+urem n1 n2 = mkNode ["urem", show n1, show n2] $ liftBoolector2 B.urem (_node n1) (_node n2)
 
 -- | Create a signed remainder.
 srem :: MonadBoolector m => Node -> Node -> m Node
-srem = liftBoolector2 B.srem
+srem n1 n2 = mkNode ["srem", show n1, show n2] $ liftBoolector2 B.srem (_node n1) (_node n2)
 
 -- | Create a, signed remainder where its sign matches the sign of the divisor.
 smod :: MonadBoolector m => Node -> Node -> m Node
-smod = liftBoolector2 B.smod
+smod n1 n2 = mkNode ["smod", show n1, show n2] $ liftBoolector2 B.smod (_node n1) (_node n2)
 
 --
 -- Overflow detection
@@ -638,43 +664,43 @@ smod = liftBoolector2 B.smod
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 usubo :: MonadBoolector m => Node -> Node -> m Node
-usubo = liftBoolector2 B.usubo
+usubo n1 n2 = mkNode ["usubo", show n1, show n2] $ liftBoolector2 B.usubo (_node n1) (_node n2)
 
 -- | Create a signed bit vector subtraction overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 ssubo :: MonadBoolector m => Node -> Node -> m Node
-ssubo = liftBoolector2 B.ssubo
+ssubo n1 n2 = mkNode ["ssubo", show n1, show n2] $ liftBoolector2 B.ssubo (_node n1) (_node n2)
 
 -- | Create an unsigned bit vector addition overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 uaddo :: MonadBoolector m => Node -> Node -> m Node
-uaddo = liftBoolector2 B.uaddo
+uaddo n1 n2 = mkNode ["uaddo", show n1, show n2] $ liftBoolector2 B.uaddo (_node n1) (_node n2)
 
 -- | Create a signed bit vector addition overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 saddo :: MonadBoolector m => Node -> Node -> m Node
-saddo = liftBoolector2 B.saddo
+saddo n1 n2 = mkNode ["saddo", show n1, show n2] $ liftBoolector2 B.saddo (_node n1) (_node n2)
 
 -- | Create an unsigned bit vector multiplication overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 umulo :: MonadBoolector m => Node -> Node -> m Node
-umulo = liftBoolector2 B.umulo
+umulo n1 n2 = mkNode ["umulo", show n1, show n2] $ liftBoolector2 B.umulo (_node n1) (_node n2)
 
 -- | Create signed multiplication overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 smulo :: MonadBoolector m => Node -> Node -> m Node
-smulo = liftBoolector2 B.smulo
+smulo n1 n2 = mkNode ["smulo", show n1, show n2] $ liftBoolector2 B.smulo (_node n1) (_node n2)
 
 -- | Create a signed bit vector division overflow detection.
 -- Returns bit vector with bit-width one, which indicates if the operation
 -- overflows.
 sdivo :: MonadBoolector m => Node -> Node -> m Node
-sdivo = liftBoolector2 B.sdivo
+sdivo n1 n2 = mkNode ["sdivo", show n1, show n2] $ liftBoolector2 B.sdivo (_node n1) (_node n2)
 
 --
 -- Comparison operations.
@@ -682,35 +708,35 @@ sdivo = liftBoolector2 B.sdivo
 
 -- | Create an unsigned less than.
 ult :: MonadBoolector m => Node -> Node -> m Node
-ult = liftBoolector2 B.ult
+ult n1 n2 = mkNode ["ult", show n1, show n2] $ liftBoolector2 B.ult (_node n1) (_node n2)
 
 -- | Create a signed less than.
 slt :: MonadBoolector m => Node -> Node -> m Node
-slt = liftBoolector2 B.slt
+slt n1 n2 = mkNode ["slt", show n1, show n2] $ liftBoolector2 B.slt (_node n1) (_node n2)
 
 -- | Create an unsigned less than or equal.
 ulte :: MonadBoolector m => Node -> Node -> m Node
-ulte = liftBoolector2 B.ulte
+ulte n1 n2 = mkNode ["ulte", show n1, show n2] $ liftBoolector2 B.ulte (_node n1) (_node n2)
 
 -- | Create a signed less than or equal.
 slte :: MonadBoolector m => Node -> Node -> m Node
-slte = liftBoolector2 B.slte
+slte n1 n2 = mkNode ["slte", show n1, show n2] $ liftBoolector2 B.slte (_node n1) (_node n2)
 
 -- | Create an unsigned greater than.
 ugt :: MonadBoolector m => Node -> Node -> m Node
-ugt = liftBoolector2 B.ugt
+ugt n1 n2 = mkNode ["ugt", show n1, show n2] $ liftBoolector2 B.ugt (_node n1) (_node n2)
 
 -- | Create a signed greater than.
 sgt :: MonadBoolector m => Node -> Node -> m Node
-sgt = liftBoolector2 B.sgt
+sgt n1 n2 = mkNode ["sgt", show n1, show n2] $ liftBoolector2 B.sgt (_node n1) (_node n2)
 
 -- | Create an unsigned greater than or equal.
 ugte :: MonadBoolector m => Node -> Node -> m Node
-ugte = liftBoolector2 B.ugte
+ugte n1 n2 = mkNode ["ugte", show n1, show n2] $ liftBoolector2 B.ugte (_node n1) (_node n2)
 
 -- | Create a signed greater than or equal.
 sgte :: MonadBoolector m => Node -> Node -> m Node
-sgte = liftBoolector2 B.sgte
+sgte n1 n2 = mkNode ["sgte", show n1, show n2] $ liftBoolector2 B.sgte (_node n1) (_node n2)
 
 --
 -- Array operations
@@ -720,14 +746,14 @@ sgte = liftBoolector2 B.sgte
 --
 -- The name must be unique.
 array :: MonadBoolector m => Sort -> String -> m Node
-array = createNamedNode B.array
+array srt str = mkNamedNode "array" B.array srt str
 
 -- | Create a read on array @n_array@ at position @n_index@.
 read :: MonadBoolector m
      => Node -- ^ Array operand.
      -> Node -- ^ Bit vector index. The bit width of @n_index@ must have the same bit width as the indices of @n_array@.
      -> m Node
-read = liftBoolector2 B.read
+read n1 n2 = mkNode ["read", show n1, show n2] $ liftBoolector2 B.read (_node n1) (_node n2)
 
 -- | Create a write on array @n_array@ at position @n_index@ with value
 -- @n_value@.
@@ -741,7 +767,7 @@ write :: MonadBoolector m
       -> Node -- ^ Bit vector index.
       -> Node -- ^ Bit vector value.
       -> m Node
-write = liftBoolector3 B.write
+write n1 n2 n3 = mkNode ["write", show n1, show n2, show n3] $ liftBoolector3 B.write (_node n1) (_node n2) (_node n3)
 
 --
 -- Functions
@@ -751,7 +777,7 @@ write = liftBoolector3 B.write
 --
 -- The name must be unique.
 uf :: MonadBoolector m => Sort -> String -> m Node
-uf = createNamedNode B.uf
+uf srt str = mkNamedNode "uf" B.uf srt str
 
 -- | Create function parameter of sort @sort@.
 --
@@ -759,7 +785,7 @@ uf = createNamedNode B.uf
 -- used to create functions. Once a parameter is bound to a function, it
 -- cannot be re-used in other functions.
 param :: MonadBoolector m => Sort -> String -> m Node
-param = liftBoolector2 B.param
+param srt str = mkNode ["param", show srt, str] $ liftBoolector2 B.param (_sort srt) str
 
 -- | Create a function with body @node@ parameterized over parameters
 -- @param_nodes@.
@@ -772,7 +798,7 @@ fun :: MonadBoolector m
     => [Node] -- ^ Parameters of function.
     -> Node   -- ^ Function body parameterized over @param_nodes@.
     -> m Node
-fun = liftBoolector2 B.fun
+fun n1 n2 = mkNode ["fun", show n1, show n2] $ liftBoolector2 B.fun (map _node n1) (_node n2)
 
 -- | Create a function application on function @n_fun@ with arguments
 -- @arg_nodes@.
@@ -780,26 +806,26 @@ apply :: MonadBoolector  m
       => [Node] -- ^ Arguments to be applied.
       -> Node   -- ^ Number of arguments to be applied.
       -> m Node
-apply = liftBoolector2 B.apply
+apply n1 n2 = mkNode ["apply", show n1, show n2] $  liftBoolector2 B.apply (map _node n1) (_node n2)
 
 
 --
 -- Quantified terms
 --
 
--- | Create a universally quantified term. 
+-- | Create a universally quantified term.
 forall :: MonadBoolector m
        => [Node] -- ^ Quantified variables (create with 'param')
        -> Node   -- ^ Term where variables may occur. (Cannot contain functions.)
        -> m Node
-forall = liftBoolector2 B.forall
+forall n1 n2 = mkNode ["forall", show n1, show n2] $  liftBoolector2 B.forall (map _node n1) (_node n2)
 
 -- | Create an existentially quantifed term.
 exists :: MonadBoolector m
        => [Node] -- ^ Quantified variables (create with 'param')
        -> Node   -- ^ Term where variables may occur. (Cannot contain functions.)
        -> m Node
-exists = liftBoolector2 B.exists
+exists n1 n2 = mkNode ["exists", show n1, show n2] $  liftBoolector2 B.exists (map _node n1) (_node n2)
 
 --
 -- Accessors
@@ -807,31 +833,31 @@ exists = liftBoolector2 B.exists
 
 -- | Get the sort of given @node@. The result does not have to be released.
 getSort :: MonadBoolector m => Node -> m Sort
-getSort = liftBoolector1 B.getSort
+getSort n = liftBoolector1 B.getSort (_node n) >>= lookupSort
 
 -- | Get the domain sort of given function node @node@.
 --
 -- The result does not have to be released.
 funGetDomainSort :: MonadBoolector m => Node -> m Sort
-funGetDomainSort = liftBoolector1 B.funGetDomainSort
+funGetDomainSort n = liftBoolector1 B.funGetDomainSort (_node n) >>= lookupSort
 
 -- | Get the codomain sort of given function node @node@.
 --
 -- The result does not have to be released.
 funGetCodomainSort :: MonadBoolector m => Node -> m Sort
-funGetCodomainSort = liftBoolector1 B.funGetCodomainSort
+funGetCodomainSort n = liftBoolector1 B.funGetCodomainSort (_node n) >>= lookupSort
 
 -- | Get the arity of function node.
 funGetArity :: MonadBoolector m => Node -> m Word
-funGetArity n = fromIntegral `liftM` liftBoolector1 B.getFunArity n
+funGetArity n = fromIntegral `liftM` liftBoolector1 B.getFunArity (_node n)
 
 -- | Get the symbol of an expression.
 getSymbol :: MonadBoolector m => Node -> m (Maybe String)
-getSymbol = liftBoolector1 B.getSymbol
+getSymbol = liftBoolector1 B.getSymbol . _node
 
 -- | Set the symbol of an expression.
 setSymbol :: MonadBoolector m => Node -> String -> m ()
-setSymbol = liftBoolector2 B.setSymbol
+setSymbol n str = liftBoolector2 B.setSymbol (_node n) str
 
 -- | Get the bit width of an expression.
 --
@@ -839,44 +865,44 @@ setSymbol = liftBoolector2 B.setSymbol
 -- elements.
 -- If the expression is a function, it returns the bit width of the function's
 -- return value.
-getWidth :: MonadBoolector m => Node -> m Word
-getWidth n = fromIntegral `liftM` liftBoolector1 B.getWidth n
+getWidth :: MonadBoolector m => Node -> m Word32
+getWidth n = fromIntegral `liftM` liftBoolector1 B.getWidth (_node n)
 
 -- | Get the bit width of indices of @n_array@.
-getIndexWidth :: MonadBoolector m => Node -> m Word
-getIndexWidth n = fromIntegral `liftM` liftBoolector1 B.getIndexWidth n
+getIndexWidth :: MonadBoolector m => Node -> m Word32
+getIndexWidth n = fromIntegral `liftM` liftBoolector1 B.getIndexWidth (_node n)
 
 -- | Determine if given node is a constant node.
 isConst :: MonadBoolector m => Node -> m Bool
-isConst = liftBoolector1 B.isConst
+isConst = liftBoolector1 B.isConst . _node
 
 -- | Determine if given node is a bit vector variable.
 isVar :: MonadBoolector m => Node -> m Bool
-isVar = liftBoolector1 B.isVar
+isVar = liftBoolector1 B.isVar . _node
 
 -- | Determine if given node is an array node.
 isArray :: MonadBoolector m => Node -> m Bool
-isArray = liftBoolector1 B.isArray
+isArray = liftBoolector1 B.isArray . _node
 
 -- | Determine if given node is an array node.
 isArrayVar :: MonadBoolector m => Node -> m Bool
-isArrayVar = liftBoolector1 B.isArrayVar
+isArrayVar = liftBoolector1 B.isArrayVar . _node
 
 -- | Determine if given node is a parameter node.
 isParam :: MonadBoolector m => Node -> m Bool
-isParam = liftBoolector1 B.isParam
+isParam = liftBoolector1 B.isParam . _node
 
 -- | Determine if given parameter node is bound by a function.
 isBoundParam :: MonadBoolector m => Node -> m Bool
-isBoundParam = liftBoolector1 B.isBoundParam
+isBoundParam = liftBoolector1 B.isBoundParam . _node
 
 -- | Determine if given node is an uninterpreted function node.
 isUf :: MonadBoolector m => Node -> m Bool
-isUf = liftBoolector1 B.isUf
+isUf = liftBoolector1 B.isUf . _node
 
 -- | Determine if given node is a function node.
 isFun :: MonadBoolector m => Node -> m Bool
-isFun = liftBoolector1 B.isFun
+isFun = liftBoolector1 B.isFun . _node
 
 
 --
@@ -891,7 +917,7 @@ isFun = liftBoolector1 B.isFun
 -- occurs in an assertion or current assumption. The assignment string has to
 -- be freed by 'freeBvAssignment'.
 bvAssignment :: MonadBoolector m => Node -> m String
-bvAssignment = liftBoolector1 B.bvAssignment
+bvAssignment = liftBoolector1 B.bvAssignment . _node
 
 -- | Get unsigned integer value from model.
 unsignedBvAssignment :: MonadBoolector m => Node -> m Integer
@@ -923,6 +949,20 @@ boolAssignment node = do
 -- Sorts
 --
 
+-- | Type of sorts, used to keep track of sorts without having to go back into C-land.
+data SortTy = BoolSort
+            | BitVecSort Word
+            | FunSort [SortTy] SortTy
+            | ArraySort SortTy SortTy
+            deriving (Eq, Ord, Show)
+
+-- | Sort wraps the udnerlying Boolector sort with a showable type.
+data Sort = Sort { sortTy :: SortTy -- ^ Get sort type
+                 , _sort  :: B.Sort
+                 } deriving (Eq, Ord)
+
+instance Show Sort where
+  show = show . sortTy
 
 -- | Create Boolean sort.
 boolSort :: Boolector Sort
@@ -930,7 +970,7 @@ boolSort = do
   sc <- getSortCache
   case scBool sc of
     Just srt -> return srt
-    _ -> do srt <- liftBoolector0 B.boolSort
+    _ -> do srt <- Sort BoolSort <$> liftBoolector0 B.boolSort
             setSortCache $ sc { scBool = Just srt }
             return srt
 
@@ -941,7 +981,7 @@ bitvecSort wnr = do
   let bvMap = scBitVec sc
   case IntMap.lookup nr bvMap of
     Just srt -> return srt
-    _ -> do srt <- liftBoolector1 B.bitvecSort nr
+    _ -> do srt <- Sort (BitVecSort nr) <$> liftBoolector1 B.bitvecSort nr
             setSortCache $ sc { scBitVec = IntMap.insert nr srt bvMap }
             return srt
   where nr = fromIntegral wnr
@@ -953,7 +993,8 @@ funSort args ret = do
   let funMap = scFun sc
   case Map.lookup (ret, args) funMap of
     Just srt -> return srt
-    _ -> do srt <- liftBoolector2 B.funSort args ret
+    _ -> do srt <- Sort (FunSort (map sortTy args) (sortTy ret))
+                       <$> liftBoolector2 B.funSort (map _sort args) (_sort ret)
             setSortCache $ sc { scFun = Map.insert (ret, args) srt funMap }
             return srt
 
@@ -964,31 +1005,38 @@ arraySort dom rng = do
   let arrMap = scArray sc
   case Map.lookup (dom, rng) arrMap of
     Just srt -> return srt
-    _ -> do srt <- liftBoolector2 B.arraySort dom rng
+    _ -> do srt <- Sort (ArraySort (sortTy dom) (sortTy rng))
+                      <$> liftBoolector2 B.arraySort (_sort dom) (_sort rng)
             setSortCache $ sc { scArray = Map.insert (dom, rng) srt arrMap }
             return srt
 
 -- | Determine if @n0@ and @n1@ have the same sort or not.
 isEqualSort :: MonadBoolector m => Node -> Node -> m Bool
-isEqualSort = liftBoolector2 B.isEqualSort
+isEqualSort n1 n2 = liftBoolector2 B.isEqualSort (_node n1) (_node n2)
 
 -- | Determine if @sort@ is an array sort.
-isArraySort :: MonadBoolector m => Sort -> m Bool
-isArraySort = liftBoolector1 B.isArraySort
+isArraySort :: Sort -> Bool
+isArraySort srt = case sortTy srt of
+                    BitVecSort _ -> True
+                    _ -> False
 
 -- | Determine if @sort@ is a bit-vector sort.
-isBitvecSort :: MonadBoolector m => Sort -> m Bool
-isBitvecSort = liftBoolector1 B.isBitvecSort
+isBitvecSort :: Sort -> Bool
+isBitvecSort srt = case sortTy srt of
+                    ArraySort _ _ -> True
+                    _ -> False
 
 -- | Determine if @sort@ is a function sort.
-isFunSort :: MonadBoolector m => Sort -> m Bool
-isFunSort = liftBoolector1 B.isFunSort
+isFunSort :: Sort -> Bool
+isFunSort srt = case sortTy srt of
+                    FunSort _ _ -> True
+                    _ -> False
 
 -- | Check if sorts of given arguments matches the function signature.
 -- Returns 'Nothing' if all sorts are correct; otherwise it returns the
 -- position of the incorrect argument.
 funSortCheck :: MonadBoolector m => [Node] -> Node -> m (Maybe Int)
-funSortCheck = liftBoolector2 B.funSortCheck
+funSortCheck n1 n2 = liftBoolector2 B.funSortCheck (map _node n1) (_node n2)
 
 
 --
@@ -1003,7 +1051,7 @@ data DumpFormat = DumpBtor | DumpSMT2
 dumpNode :: MonadBoolector m => DumpFormat -> FilePath -> Node -> m ()
 dumpNode fmt path node = do
   btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withDumpFile path $ \file -> dumper btor file node
+  liftIO $ B.withDumpFile path $ \file -> dumper btor file (_node node)
   where dumper = case fmt of
                   DumpBtor -> B.dumpBtorNode
                   _        -> B.dumpSmt2Node
@@ -1022,7 +1070,7 @@ dump fmt path = do
 dumpNodeToString :: MonadBoolector m => DumpFormat -> Node -> m String
 dumpNodeToString fmt node = do
   btor <- unBoolectorState `liftM` getBoolectorState
-  liftIO $ B.withTempDumpFile (\file -> dumper btor file node)
+  liftIO $ B.withTempDumpFile (\file -> dumper btor file (_node node))
   where dumper = case fmt of
                   DumpBtor -> B.dumpBtorNode
                   _        -> B.dumpSmt2Node
@@ -1110,15 +1158,59 @@ setVarCache vc = do
   s0 <- getBoolectorState
   putBoolectorState $ s0 { unBoolectorCache = (unBoolectorCache s0) { varCache = vc } }
 
+
+--
+-- Internal helpers
+--
+
+-- | Class used to create nodes from boolector nodes, given a stringification
+class Show s => MkNode s where
+  mkNode :: MonadBoolector m => s -> m B.Node -> m Node
+
+instance MkNode String where
+  mkNode str act = do
+    node <- act
+    return $ Node node str
+
+instance MkNode [String] where
+  mkNode str act = do
+    node <- act
+    return $ Node node $ "(" ++ unwords str ++ ")"
+
+
 -- | Create a new named node given a constructor or return it from variable
 -- cache. The name must be unique.
-createNamedNode :: MonadBoolector m
-                => (B.Btor -> Sort -> String -> IO Node)
-                -> Sort -> String -> m Node
-createNamedNode ctor sort name = do
+mkNamedNode :: MonadBoolector m
+            => String                                    -- ^ Kind of node
+            -> (B.Btor -> B.Sort -> String -> IO B.Node) -- ^ Underlying constructor
+            -> Sort                                      -- ^ Sort of node
+            -> String                                    -- ^ Name of node
+            -> m Node
+mkNamedNode kind ctor sort name = do
   vc <- getVarCache
   case Map.lookup (name, sort) vc of
     Just srt -> return srt
-    _ -> do node <- liftBoolector2 ctor sort name
+    _ -> do node <- mkNode [kind, name, "::", show sort] $
+                      liftBoolector2 ctor (_sort sort) name
             setVarCache $ Map.insert (name, sort) node vc
             return node
+
+-- | Get the high level sort from cache that corresponds to boolector sort
+lookupSort :: MonadBoolector m => B.Sort -> m Sort
+lookupSort bSort = do
+  sc <- getSortCache
+  case () of
+    _ | Just srt <- lookupBoolSort sc   -> return srt
+    _ | Just srt <- lookupBitVecSort sc -> return srt
+    _ | Just srt <- lookupFunSort sc    -> return srt
+    _ | Just srt <- lookupArraySort sc  -> return srt
+    _ -> fail "BUG: should really have the sort in the cache"
+  where lookupBoolSort sc = case scBool sc of
+                              Just srt | _sort srt == bSort -> Just srt
+                              _ -> Nothing
+        lookupBitVecSort sc = listToMaybe $ IntMap.elems $
+                                IntMap.filter (\s -> _sort s == bSort) $ scBitVec sc
+        lookupFunSort sc = listToMaybe $ Map.elems $
+                                Map.filter (\s -> _sort s == bSort) $ scFun sc
+        lookupArraySort sc = listToMaybe $ Map.elems $
+                                Map.filter (\s -> _sort s == bSort) $ scArray sc

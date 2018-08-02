@@ -24,10 +24,14 @@ main = do
     e  <- B.eq c p
 
     -- Make some assertions
-    B.assert =<< B.and no e
+    B.and no e >>= \node -> do
+      liftIO $ putStrLn (show node)
+      B.assert node
+
     one <- B.one u8
     B.assert =<< B.ugt x one
     B.assert =<< B.ugt y one
+
 
     -- Dump the corresponding SMT Lib 2 to a file
     B.dump B.DumpSMT2 "dump_example.smt2"
