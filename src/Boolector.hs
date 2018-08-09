@@ -421,7 +421,7 @@ one = mkNode "1" . liftBoolector1 B.one . _sort
 -- The constant is obtained by either truncating bits or by unsigned extension
 -- (padding with zeroes).
 unsignedInt :: MonadBoolector m => Integer -> Sort -> m Node
-unsignedInt i srt = mkNode (show i) $ liftBoolector2 B.unsignedInt (fromIntegral i) (_sort srt)
+unsignedInt i srt = constd srt (show i)
 
 -- | Create bit vector constant representing the signed integer @i@ of sort
 -- @sort@.
@@ -429,7 +429,8 @@ unsignedInt i srt = mkNode (show i) $ liftBoolector2 B.unsignedInt (fromIntegral
 -- The constant is obtained by either truncating bits or by
 -- signed extension (padding with ones).
 signedInt :: MonadBoolector m => Integer -> Sort -> m Node
-signedInt i srt = mkNode (show i) $ liftBoolector2 B.int (fromIntegral i) (_sort srt)
+signedInt i srt = constd srt (show i)
+
 
 -- | Create a bit vector variable of sort @sort@.
 var :: MonadBoolector m => Sort -> String -> m Node

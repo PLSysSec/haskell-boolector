@@ -79,6 +79,15 @@ Test-Suite Arith_Example
   extra-libraries:  boolector
   hs-source-dirs: test
 
+Test-Suite Arith_Example2
+  default-language: Haskell2010
+  Build-Depends: base >= 4.7 && < 5
+               , boolector
+  Type: exitcode-stdio-1.0
+  main-is: Arith_Example2.hs
+  extra-libraries:  boolector
+  hs-source-dirs: test
+
 Test-Suite GetSetSymbol_Example
   default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5
