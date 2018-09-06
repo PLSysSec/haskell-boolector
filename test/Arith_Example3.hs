@@ -8,16 +8,19 @@ main :: IO ()
 main = do
   bs <- B.newBoolectorState Nothing
   B.evalBoolector bs $ do
-    -- Create sorts:
-    i64   <- B.bitvecSort 64
+    -- Create sort:
+    u64   <- B.bitvecSort 64
+
+    -- Test isBitvecSort:
+    assert (B.isBitvecSort u64) $ return ()
 
     -- Create variables x and y
-    x <- B.var i64 "x"
-    y <- B.var i64 "y"
+    x <- B.var u64 "x"
+    y <- B.var u64 "y"
 
     -- Create constants:
-    big   <- B.unsignedInt _BIG i64
-    small <- B.unsignedInt _SMALL i64
+    big   <- B.unsignedInt _BIG u64
+    small <- B.unsignedInt _SMALL u64
     
     -- Create action to print model
     let printModel = do mx <- B.unsignedBvAssignment x

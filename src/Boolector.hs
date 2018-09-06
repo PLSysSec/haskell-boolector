@@ -1018,13 +1018,13 @@ isEqualSort n1 n2 = liftBoolector2 B.isEqualSort (_node n1) (_node n2)
 -- | Determine if @sort@ is an array sort.
 isArraySort :: Sort -> Bool
 isArraySort srt = case sortTy srt of
-                    BitVecSort _ -> True
+                    ArraySort _ _ -> True
                     _ -> False
 
 -- | Determine if @sort@ is a bit-vector sort.
 isBitvecSort :: Sort -> Bool
 isBitvecSort srt = case sortTy srt of
-                    ArraySort _ _ -> True
+                    BitVecSort _ -> True
                     _ -> False
 
 -- | Determine if @sort@ is a function sort.

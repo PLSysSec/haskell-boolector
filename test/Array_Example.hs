@@ -12,6 +12,12 @@ main = do
 
     arr8x32 <- B.arraySort u8 u32
 
+    -- Test isBitvecSort:
+    assert (B.isBitvecSort u8) $ return ()
+    assert (B.isBitvecSort u32) $ return ()
+    -- Test isArraySort:
+    assert (B.isArraySort arr8x32) $ return ()
+
     arr <- B.array arr8x32 "a"
 
     x <- B.var u8 "x"

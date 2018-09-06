@@ -12,6 +12,11 @@ main = do
     u32 <- B.bitvecSort 32
     fSort <- B.funSort [u32] u32
 
+    -- Test isBitvecSort:
+    assert (B.isBitvecSort u32) $ return ()
+    -- Test isFunSort:
+    assert (B.isFunSort fSort) $ return ()
+
     -- Create variables f, a, and b:
     f <- B.uf fSort "f"
     a <- B.var u32 "a"
