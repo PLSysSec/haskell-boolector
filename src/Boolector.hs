@@ -77,6 +77,7 @@ module Boolector ( -- * Boolector monadic computations
                   -- ** Boolector state
                  , BoolectorState
                  , newBoolectorState
+                 , createDefaultSorts
                   -- ** Options and configurations
                  , Option(..)
                  , setOpt
@@ -273,12 +274,12 @@ newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
 
 -- | Evaluate a Boolector action with a given configurations.
 evalBoolector :: BoolectorState -> Boolector a -> IO a
-evalBoolector bState act = evalStateT (unBoolector act) bState
+evalBoolector bState act = evalStateT (unBoolector $ createDefaultSorts >> act) bState
 
 -- | Like 'evalBoolector', but take an explicit starting BoolectorState, and
 -- return the final BoolectorState
 runBoolector :: BoolectorState -> Boolector a -> IO (a, BoolectorState)
-runBoolector bState act = runStateT (unBoolector act) bState
+runBoolector bState act = runStateT (unBoolector $ createDefaultSorts >> act) bState
 
 -- | Create new Boolector state with optional timeout. By default, we enable
 -- support for model generation and incremental solving.
@@ -468,33 +469,58 @@ slice :: MonadBoolector m
       -> Word32 -- ^ Upper index which must be greater than or equal to zero, and less than the bit width of @node@.
       -> Word32 -- ^ Lower index which must be greater than or equal to zero, and less than or equal to @upper@.
       -> m Node
-slice n u l = mkNode ["slice", show n, show u, show l] $
-              liftBoolector3 B.slice (_node n) (fromIntegral u) (fromIntegral l)
+slice n u l = do
+  -- Create sort if not already in cache
+  void $ bitvecSort (fromIntegral $ u - l + 1)
+  --
+  mkNode ["slice", show n, show u, show l] $
+    liftBoolector3 B.slice (_node n) (fromIntegral u) (fromIntegral l)
 
 -- | Create unsigned extension.
 --
 -- The bit vector @node@ is padded with @width@ * zeroes.
 uext :: MonadBoolector m => Node -> Word32 -> m Node
-uext n w = mkNode ["uext", show n, show w] $
-           liftBoolector2 B.uext (_node n) (fromIntegral w)
+uext n w = do
+  -- Create sort if not already in cache
+  nw <- getWidth n
+  void $ bitvecSort (fromIntegral $ nw + w)
+  --
+  mkNode ["uext", show n, show w] $
+    liftBoolector2 B.uext (_node n) (fromIntegral w)
 
 -- | Create signed extension.
 --
 -- The bit vector @node@ is padded with @width@ bits where the value
 -- depends on the value of the most significant bit of node @n@.
 sext :: MonadBoolector m => Node -> Word32 -> m Node
-sext n w = mkNode ["sext", show n, show w] $
-           liftBoolector2 B.sext (_node n) (fromIntegral w)
+sext n w = do
+  -- Create sort if not already in cache
+  nw <- getWidth n
+  void $ bitvecSort (fromIntegral $ nw + w)
+  --
+  mkNode ["sext", show n, show w] $
+    liftBoolector2 B.sext (_node n) (fromIntegral w)
 
 -- | Create the concatenation of two bit vectors.
 concat :: MonadBoolector m => Node -> Node -> m Node
-concat n1 n2 = mkNode ["concat", show n1, show n2] $
-               liftBoolector2 B.concat (_node n1) (_node n2)
+concat n1 n2 = do
+  -- Create sort if not already in cache
+  nw1 <- getWidth n1
+  nw2 <- getWidth n2
+  void $ bitvecSort (fromIntegral $ nw1 + nw2)
+  --
+  mkNode ["concat", show n1, show n2] $
+    liftBoolector2 B.concat (_node n1) (_node n2)
 
 -- | Create @n@ concatenations of a given node @node@.
 repeat :: MonadBoolector m => Node -> Word32 -> m Node
-repeat n w = mkNode ["repeat", show n, show w] $
-             liftBoolector2 B.repeat (_node n) (fromIntegral w)
+repeat n w = do
+  -- Create sort if not already in cache
+  nw <- getWidth n
+  void $ bitvecSort (fromIntegral $ nw * w)
+  --
+  mkNode ["repeat", show n, show w] $
+    liftBoolector2 B.repeat (_node n) (fromIntegral w)
 
 -- | Create boolean implication.
 implies :: MonadBoolector m => Node -> Node -> m Node
@@ -964,6 +990,19 @@ data Sort = Sort { sortTy :: SortTy -- ^ Get sort type
 
 instance Show Sort where
   show = show . sortTy
+
+-- | Create some default, sane sorts.
+createDefaultSorts :: Boolector ()
+createDefaultSorts = do
+  void $ boolSort
+  void $ bitvecSort 1
+  void $ bitvecSort 2
+  void $ bitvecSort 4
+  void $ bitvecSort 8
+  void $ bitvecSort 16
+  void $ bitvecSort 32
+  void $ bitvecSort 64
+  void $ bitvecSort 128
 
 -- | Create Boolean sort.
 boolSort :: Boolector Sort
