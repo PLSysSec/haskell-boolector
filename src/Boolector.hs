@@ -219,6 +219,7 @@ module Boolector ( -- * Boolector monadic computations
                  -- *** Accessors
                  , isEqualSort
                  , isArraySort
+                 , isBoolSort
                  , isBitvecSort
                  , isFunSort
                  , funSortCheck
@@ -1058,6 +1059,12 @@ isEqualSort n1 n2 = liftBoolector2 B.isEqualSort (_node n1) (_node n2)
 isArraySort :: Sort -> Bool
 isArraySort srt = case sortTy srt of
                     ArraySort _ _ -> True
+                    _ -> False
+
+-- | Determine if @sort@ is a bool sort.
+isBoolSort :: Sort -> Bool
+isBoolSort srt = case sortTy srt of
+                    BoolSort -> True
                     _ -> False
 
 -- | Determine if @sort@ is a bit-vector sort.
