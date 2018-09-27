@@ -245,7 +245,10 @@ import Data.Word
 import Control.Applicative ((<$>))
 import Control.Monad.State.Strict
 import Control.Exception hiding (assert)
-import Control.Concurrent
+
+import Data.Time.Clock
+import Data.Time.Clock.TAI
+import Data.Time.Clock.System
 
 import Prelude hiding (read, not, and, or, const, concat, repeat)
 import qualified Prelude as Prelude
@@ -284,7 +287,7 @@ runBoolector bState act = runStateT (unBoolector $ createDefaultSorts >> act) bS
 
 -- | Create new Boolector state with optional timeout. By default, we enable
 -- support for model generation and incremental solving.
-newBoolectorState :: Maybe Int -> IO BoolectorState
+newBoolectorState :: Maybe Integer -> IO BoolectorState
 newBoolectorState Nothing = do
   b <- B.new
   B.setOpt b OPT_MODEL_GEN 2
@@ -292,12 +295,12 @@ newBoolectorState Nothing = do
   B.setOpt b OPT_INCREMENTAL 1
   return $ BoolectorState b emptyBoolectorCache
 newBoolectorState (Just time) = do
-  term <- newMVar 0
   btorState@(BoolectorState b _) <- newBoolectorState Nothing
+  t0 <- systemToTAITime `liftM` getSystemTime
   B.setTerm b $ \_ -> do
-    readMVar term
-  void $ forkIO $ do threadDelay $ time * 1000
-                     putMVar term 1 -- this will cause boolector eval to fail if not done
+    t1 <- systemToTAITime `liftM` getSystemTime
+    let shouldTerminate = diffAbsoluteTime t1 t0 > secondsToDiffTime time
+    return $ if shouldTerminate then 1 else 0
   return btorState
 
 -- | Set option.

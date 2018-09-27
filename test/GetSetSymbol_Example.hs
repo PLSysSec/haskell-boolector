@@ -10,8 +10,8 @@ import Control.Concurrent
 
 main :: IO ()
 main = do
-  -- Create new Boolector state with a 1000ms timeout
-  bs <- B.newBoolectorState (Just 1000)
+  -- Create new Boolector state with a 1s timeout
+  bs <- B.newBoolectorState (Just 1)
   B.evalBoolector bs $ do
     -- Create a 8-bit bit-vector
     u8 <- B.bitvecSort 8
