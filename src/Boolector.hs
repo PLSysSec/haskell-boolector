@@ -409,7 +409,7 @@ zero = mkNode "zero" . liftBoolector1 B.zero . _sort
 
 -- | Create bit vector constant of sort @sort@, where each bit is set to one.
 ones :: MonadBoolector m => Sort -> m Node
-ones srt = mkNode onesStr $ liftBoolector1 B.one $ _sort srt
+ones srt = mkNode onesStr $ liftBoolector1 B.ones $ _sort srt
   where onesStr = "0b" ++ replicate nr '1'
         nr = case sortTy srt of
               BoolSort -> 1
