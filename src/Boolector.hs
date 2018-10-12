@@ -209,6 +209,10 @@ module Boolector ( -- * Boolector monadic computations
                  , unsignedBvAssignment
                  , signedBvAssignment
                  , boolAssignment
+                 -- ** Constant nodes
+                 , boolConst
+                 , signedBvConst
+                 , unsignedBvConst
                  -- ** Sorts
                  , Sort
                  , SortTy, sortTy
@@ -890,6 +894,10 @@ getSymbol = liftBoolector1 B.getSymbol . _node
 setSymbol :: MonadBoolector m => Node -> String -> m ()
 setSymbol n str = liftBoolector2 B.setSymbol (_node n) str
 
+-- | Get the bit vector of a constant node as a bit string.
+getBits :: MonadBoolector m => Node -> m String
+getBits = liftBoolector1 B.getBits . _node
+
 -- | Get the bit width of an expression.
 --
 -- If the expression is an array, it returns the bit width of the array
@@ -940,6 +948,51 @@ isFun = liftBoolector1 B.isFun . _node
 -- Models.
 --
 
+-- | Get the bool value of a constant node if it is constant.
+boolConst :: MonadBoolector m => Node -> m (Maybe Bool)
+boolConst node = do
+  cnst <- isConst node
+  if cnst
+    then do str <- getBits node
+            Just `liftM` bitsToBool str
+    else return Nothing
+
+-- | Get the unsigned integer value of a constant node if it is constant.
+unsignedBvConst :: MonadBoolector m => Node -> m (Maybe Integer)
+unsignedBvConst node = do
+  cnst <- isConst node
+  if cnst
+    then do str <- getBits node
+            Just `liftM` bitsToUnsignedInteger str
+    else return Nothing
+
+-- | Get the signed integer value of a constant node if it is constant.
+signedBvConst :: MonadBoolector m => Node -> m (Maybe Integer)
+signedBvConst node = do
+  cnst <- isConst node
+  if cnst
+    then do str <- getBits node
+            val <- bitsToUnsignedInteger str
+            w <- getWidth node
+            let max_signed_w = 2 ^ pred w
+            return . Just $ if val >= max_signed_w
+                              then val - (2*max_signed_w)
+                              else val
+    else return Nothing
+
+-- | Helper for converting bit-string to an unsigned integer.
+bitsToUnsignedInteger :: MonadBoolector m => String -> m Integer
+bitsToUnsignedInteger str = do
+  when (Prelude.not $ all isDigit str) $ error $ "getModelVal: not numeric: " ++ str
+  liftIO $ evaluate $ foldl (\ n c -> 2 * n + Prelude.read [c]) 0 str
+
+-- | Helper for converting bit-string to a boolean.
+bitsToBool :: MonadBoolector m => String -> m Bool
+bitsToBool str = liftIO $ evaluate $ case str of
+  "0" -> False
+  "1" -> True
+  _   -> error $ "bitsToBool: not boolean: " ++ str
+
 -- | Generate an assignment string for bit vector expression if
 -- boolector_sat has returned BOOLECTOR_SAT and model generation has been
 -- enabled.
@@ -954,8 +1007,7 @@ bvAssignment = liftBoolector1 B.bvAssignment . _node
 unsignedBvAssignment :: MonadBoolector m => Node -> m Integer
 unsignedBvAssignment node = do
   str <- bvAssignment node
-  when (Prelude.not $ all isDigit str) $ error $ "getModelVal: not numeric: " ++ str
-  liftIO $ evaluate $ foldl (\ n c -> 2 * n + Prelude.read [c]) 0 str
+  bitsToUnsignedInteger str
 
 -- | Get signed integer value from model.
 signedBvAssignment :: MonadBoolector m => Node -> m Integer
@@ -971,10 +1023,7 @@ signedBvAssignment node = do
 boolAssignment :: MonadBoolector m => Node -> m Bool
 boolAssignment node = do
     str <- bvAssignment node
-    liftIO $ evaluate $ case str of
-        "0" -> False
-        "1" -> True
-        _   -> error $ "boolAssignment: not boolean: " ++ str
+    bitsToBool str
 
 --
 -- Sorts

@@ -122,6 +122,7 @@ module Boolector.Foreign (
   , getFunArity
   , getSymbol
   , setSymbol
+  , getBits
   , getWidth
   , getIndexWidth
   , isConst
@@ -787,6 +788,10 @@ getSymbol hbtor hnode = withBtor hbtor $ \cbtor ->
 
 -- | Set the symbol of an expression.
 {#fun set_symbol as ^ { `Btor' , `Node', `String' } -> `()' #}
+
+-- | Get the bit vector of a constant node as a bit string.
+{#fun get_bits as ^ { `Btor' , `Node' } -> `String' #}
+
 
 -- | Get the bit width of an expression.
 --
