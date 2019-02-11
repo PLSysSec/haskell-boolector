@@ -12,7 +12,7 @@ description:
 
 license:             MIT
 license-file:        LICENSE
-author:              Dein Stefan, Johannes Waldmann, Armin Biere
+author:              Deian Stefan, Johannes Waldmann, Armin Biere
 maintainer:          Deian Stefan <deian@cs.ucsd.edu>
 category:            Math, SMT, Theorem Provers, Formal Methods, Bit vectors
 build-type:          Simple
