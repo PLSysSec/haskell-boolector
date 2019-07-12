@@ -257,6 +257,10 @@ import Data.Time.Clock.System
 import Prelude hiding (read, not, and, or, const, concat, repeat)
 import qualified Prelude as Prelude
 
+#if MIN_VERSION_base(4,9,0)
+import qualified Control.Monad.Fail as Fail
+#endif
+
 --
 -- Boolector monad
 --
@@ -278,7 +282,12 @@ data BoolectorState = BoolectorState { unBoolectorState :: B.Btor
 
 -- | Bolector monad, keeping track of underlying solver state.
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
-    deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO)
+    deriving
+      ( Functor, Applicative, Monad, MonadState BoolectorState, MonadIO
+#if MIN_VERSION_base(4,9,0)
+      , Fail.MonadFail
+#endif
+      )
 
 -- | Evaluate a Boolector action with a given configurations.
 evalBoolector :: BoolectorState -> Boolector a -> IO a
