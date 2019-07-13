@@ -238,6 +238,7 @@ module Boolector ( -- * Boolector monadic computations
 import Boolector.Foreign (Option(..), Status(..))
 import qualified Boolector.Foreign as B
 
+import qualified Control.Monad.Fail as Fail
 import Data.Char (isDigit)
 import Data.Maybe (listToMaybe)
 import Data.Map (Map)
@@ -278,7 +279,7 @@ data BoolectorState = BoolectorState { unBoolectorState :: B.Btor
 
 -- | Bolector monad, keeping track of underlying solver state.
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
-    deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO)
+    deriving (Functor, Applicative, Monad, MonadState BoolectorState, MonadIO, Fail.MonadFail)
 
 -- | Evaluate a Boolector action with a given configurations.
 evalBoolector :: BoolectorState -> Boolector a -> IO a
