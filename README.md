@@ -1,3 +1,5 @@
+[![Hackage](https://img.shields.io/hackage/v/boolector.svg)](https://hackage.haskell.org/package/boolector)
+
 # Haskell binding for the Boolector SMT Solver
 
 This is a simple library for writing SMT queries against the Boolector SMT
