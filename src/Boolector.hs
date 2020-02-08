@@ -240,6 +240,7 @@ import qualified Boolector.Foreign as B
 
 import qualified Control.Monad.Fail as Fail
 import Data.Char (isDigit)
+import Data.IORef
 import Data.Maybe (listToMaybe)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -273,9 +274,11 @@ instance MonadBoolector Boolector where
   getBoolectorState = get
   putBoolectorState = put
 
--- | Solver state and cache
+-- | Solver state, cache, and start time.
 data BoolectorState = BoolectorState { unBoolectorState :: B.Btor
-                                     , unBoolectorCache :: BoolectorCache }
+                                     , unBoolectorCache :: BoolectorCache
+                                     , unBoolectorStartTime :: Maybe (IORef (Maybe AbsoluteTime))
+                                     }
 
 -- | Bolector monad, keeping track of underlying solver state.
 newtype Boolector a = Boolector { unBoolector :: StateT BoolectorState IO a }
@@ -290,7 +293,7 @@ evalBoolector bState act = evalStateT (unBoolector $ createDefaultSorts >> act) 
 runBoolector :: BoolectorState -> Boolector a -> IO (a, BoolectorState)
 runBoolector bState act = runStateT (unBoolector $ createDefaultSorts >> act) bState
 
--- | Create new Boolector state with optional timeout. By default, we enable
+-- | Create new Boolector state with optional timeout for `sat`. By default, we enable
 -- support for model generation and incremental solving.
 newBoolectorState :: Maybe Integer -> IO BoolectorState
 newBoolectorState Nothing = do
@@ -298,15 +301,32 @@ newBoolectorState Nothing = do
   B.setOpt b OPT_MODEL_GEN 2
   B.setOpt b OPT_AUTO_CLEANUP 1
   B.setOpt b OPT_INCREMENTAL 1
-  return $ BoolectorState b emptyBoolectorCache
+  return $ BoolectorState b emptyBoolectorCache Nothing
 newBoolectorState (Just time) = do
-  btorState@(BoolectorState b _) <- newBoolectorState Nothing
-  t0 <- systemToTAITime `liftM` getSystemTime
+  btorState@(BoolectorState b _ _) <- newBoolectorState Nothing
+  ref <- newIORef Nothing
   B.setTerm b $ \_ -> do
-    t1 <- systemToTAITime `liftM` getSystemTime
-    let shouldTerminate = diffAbsoluteTime t1 t0 > secondsToDiffTime time
-    return $ if shouldTerminate then 1 else 0
-  return btorState
+    mt0 <- readIORef ref
+    case mt0 of
+      Nothing -> return 0
+      Just t0 -> do
+        t1 <- systemToTAITime `liftM` getSystemTime
+        let shouldTerminate = diffAbsoluteTime t1 t0 > secondsToDiffTime time
+        return $ if shouldTerminate then 1 else 0
+  return $ btorState { unBoolectorStartTime = Just ref }
+
+-- | Start the timer if we're running this instance with a timeout. To ensure
+-- we only set the timer once, we remove the reference from the state.
+maybeStartTimer :: MonadBoolector m => m ()
+maybeStartTimer = do
+  s0 <- getBoolectorState
+  let mref = unBoolectorStartTime s0
+  case mref of
+    Nothing -> return ()
+    Just ref -> do 
+      putBoolectorState $ s0 { unBoolectorStartTime = Nothing }
+      t0 <- liftIO $ systemToTAITime `liftM` getSystemTime
+      liftIO $ writeIORef ref (Just t0)
 
 -- | Set option.
 setOpt :: MonadBoolector m => Option -> Word32 -> m ()
@@ -346,9 +366,9 @@ fixateAssumptions = liftBoolector0 B.fixateAssumptions
 resetAssumptions :: MonadBoolector m => m ()
 resetAssumptions = liftBoolector0 B.resetAssumptions
 
--- | Solve an input formula.
+-- | Solve an input formula (or time out).
 sat :: MonadBoolector m => m Status
-sat = liftBoolector0 B.sat
+sat = maybeStartTimer >> liftBoolector0 B.sat
 
 -- | Push new context levels.
 push :: MonadBoolector m => Word32 -> m ()
