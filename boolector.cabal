@@ -48,6 +48,9 @@ library
   ghc-options: -Wall -fno-warn-orphans
   build-tools:      c2hs
 
+  -- extra-libraries:  boolector
+  -- includes:         boolector.h
+
 Test-Suite API_Usage_Example
   default-language: Haskell2010
   Build-Depends: base >= 4.7 && < 5

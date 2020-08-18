@@ -170,7 +170,6 @@ import System.Directory (removeFile)
 {#context lib = "boolector" prefix = "boolector_" #}
 
 #include "boolector/boolector.h"
-#include "boolector/btortypes.h"
 
 
 --
