@@ -1,5 +1,5 @@
 name:                boolector
-version:             0.0.0.12
+version:             0.0.0.11
 synopsis:            Haskell bindings for the Boolector SMT solver
 description:
 
@@ -15,7 +15,7 @@ license-file:        LICENSE
 author:              Deian Stefan, Johannes Waldmann, Armin Biere
 maintainer:          Deian Stefan <deian@cs.ucsd.edu>
 category:            Math, SMT, Theorem Provers, Formal Methods, Bit vectors
-build-type:          Custom
+build-type:          Simple
 cabal-version:       >= 1.10
 homepage:       https://github.com/plsyssec/haskell-boolector
 bug-reports:    https://github.com/plsyssec/haskell-boolector/issues
@@ -23,11 +23,6 @@ bug-reports:    https://github.com/plsyssec/haskell-boolector/issues
 source-repository head
   type:     git
   location: https://github.com/PLSysSec/haskell-boolector.git
-
-custom-setup
-  setup-depends:
-        base >=4.7 && <5,
-        Cabal
 
 library
   hs-source-dirs: src
@@ -48,8 +43,8 @@ library
   ghc-options: -Wall -fno-warn-orphans
   build-tools:      c2hs
 
-  -- extra-libraries:  boolector
-  -- includes:         boolector.h
+  extra-libraries:  boolector
+  includes:         boolector.h
 
 Test-Suite API_Usage_Example
   default-language: Haskell2010

@@ -1,3 +1,0 @@
-[submodule "deps/boolector"]
-	path = deps/boolector
-	url = https://github.com/boolector/boolector
