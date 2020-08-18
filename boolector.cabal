@@ -1,5 +1,5 @@
 name:                boolector
-version:             0.0.0.11
+version:             0.0.0.13
 synopsis:            Haskell bindings for the Boolector SMT solver
 description:
 
